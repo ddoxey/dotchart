@@ -1,7 +1,0 @@
-/Users/ddoxey/projects/dotchart/build/CMakeFiles/dotchart.dir
-/Users/ddoxey/projects/dotchart/build/CMakeFiles/edit_cache.dir
-/Users/ddoxey/projects/dotchart/build/CMakeFiles/rebuild_cache.dir
-/Users/ddoxey/projects/dotchart/build/CMakeFiles/list_install_components.dir
-/Users/ddoxey/projects/dotchart/build/CMakeFiles/install.dir
-/Users/ddoxey/projects/dotchart/build/CMakeFiles/install/local.dir
-/Users/ddoxey/projects/dotchart/build/CMakeFiles/install/strip.dir
