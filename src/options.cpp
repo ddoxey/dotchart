@@ -56,8 +56,9 @@ Scaling:
   -S, --signed             Force signed chart (baseline at 0)
 
 Labels:
-  -y, --y-axis             Show y-axis labels
-  -Y, --y-fmt FMT          printf-style y label format (default: "%3.0f ")
+  -x, --x-axis[=FMT]       Show x-axis labels (default format: "%d")
+  -y, --y-axis[=FMT]       Show y-axis labels (default format: "%3.0f ")
+  -Y, --y-fmt FMT          printf-style y label format (legacy)
 
 Other:
       --no-unicode         ASCII fallback (placeholder)
@@ -75,7 +76,7 @@ ParseResult parse_args(int argc, char** argv) {
   ParseResult r;
 
 #if defined(__unix__) || defined(__APPLE__)
-  const char* short_opts = "F:f:c:W:H:T:M:m:SyY:hvd";
+  const char* short_opts = "F:f:c:W:H:T:M:m:SxyY:hvd";
   static option long_opts[] = {
     {"field-sep", required_argument, nullptr, 'F'},
     {"file", required_argument, nullptr, 'f'},
@@ -86,7 +87,8 @@ ParseResult parse_args(int argc, char** argv) {
     {"max", required_argument, nullptr, 'M'},
     {"min", required_argument, nullptr, 'm'},
     {"signed", no_argument, nullptr, 'S'},
-    {"y-axis", no_argument, nullptr, 'y'},
+    {"x-axis", optional_argument, nullptr, 'x'},
+    {"y-axis", optional_argument, nullptr, 'y'},
     {"y-fmt", required_argument, nullptr, 'Y'},
     {"no-unicode", no_argument, nullptr, 1000},
     {"help", no_argument, nullptr, 'h'},
@@ -174,11 +176,20 @@ ParseResult parse_args(int argc, char** argv) {
       case 'S':
         r.opts.force_signed = true;
         break;
+      case 'x':
+        r.opts.show_x_axis = true;
+        if (optarg && *optarg) r.opts.x_axis_fmt = std::string(optarg);
+        break;
       case 'y':
         r.opts.show_y_axis = true;
+        if (optarg && *optarg) {
+          r.opts.y_axis_fmt = std::string(optarg);
+          r.opts.y_axis_fmt_explicit = true;
+        }
         break;
       case 'Y':
         r.opts.y_axis_fmt = std::string(optarg);
+        r.opts.y_axis_fmt_explicit = true;
         break;
       case 1000:
         r.opts.unicode = false;

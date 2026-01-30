@@ -43,6 +43,62 @@ struct DataStats {
   double max_abs = 0.0;
 };
 
+static std::string format_double(const std::string& fmt, double value) {
+  char buf[128];
+  int n = std::snprintf(buf, sizeof(buf), fmt.c_str(), value);
+  if (n < 0) return std::string();
+  if (n < static_cast<int>(sizeof(buf))) return std::string(buf, static_cast<size_t>(n));
+  std::string out(static_cast<size_t>(n) + 1, '\0');
+  std::snprintf(out.data(), out.size(), fmt.c_str(), value);
+  out.resize(static_cast<size_t>(n));
+  return out;
+}
+
+static std::string format_int(const std::string& fmt, int value) {
+  char buf[128];
+  int n = std::snprintf(buf, sizeof(buf), fmt.c_str(), value);
+  if (n < 0) return std::string();
+  if (n < static_cast<int>(sizeof(buf))) return std::string(buf, static_cast<size_t>(n));
+  std::string out(static_cast<size_t>(n) + 1, '\0');
+  std::snprintf(out.data(), out.size(), fmt.c_str(), value);
+  out.resize(static_cast<size_t>(n));
+  return out;
+}
+
+static int clamp_int(int v, int lo, int hi) {
+  return std::min(hi, std::max(lo, v));
+}
+
+static double safe_range(double lo, double hi) {
+  double r = hi - lo;
+  return (r > 0.0) ? r : 1.0;
+}
+
+static bool fmt_expects_int(const std::string& fmt) {
+  bool saw_int = false;
+  bool saw_float = false;
+  for (size_t i = 0; i < fmt.size(); ++i) {
+    if (fmt[i] != '%') continue;
+    if (i + 1 < fmt.size() && fmt[i + 1] == '%') {
+      ++i;
+      continue;
+    }
+    size_t j = i + 1;
+    while (j < fmt.size() && std::string("+- #0").find(fmt[j]) != std::string::npos) ++j;
+    while (j < fmt.size() && std::isdigit(static_cast<unsigned char>(fmt[j]))) ++j;
+    if (j < fmt.size() && fmt[j] == '.') {
+      ++j;
+      while (j < fmt.size() && std::isdigit(static_cast<unsigned char>(fmt[j]))) ++j;
+    }
+    if (j < fmt.size()) {
+      char c = fmt[j];
+      if (c == 'd' || c == 'i') saw_int = true;
+      if (c == 'f' || c == 'F' || c == 'e' || c == 'E' || c == 'g' || c == 'G') saw_float = true;
+    }
+  }
+  return saw_int && !saw_float;
+}
+
 static DataStats compute_data_stats(const std::vector<double>& v) {
   DataStats s;
   if (v.empty()) return s;
@@ -187,10 +243,6 @@ static std::vector<double> resample_extreme_abs(const std::vector<double>& in, i
   return out;
 }
 
-static int clamp_int(int v, int lo, int hi) {
-  return std::min(hi, std::max(lo, v));
-}
-
 static void set_bar_segment(BrailleCanvas& canvas,
                             int cx,
                             int px,
@@ -218,8 +270,96 @@ std::vector<std::string> render_chart(const Options& opts, const std::vector<dou
 
   const int H = std::max(1, opts.height);
 
-  // Y-axis not implemented yet; keep at 0 for now.
-  const int y_axis_cols = 0;
+  const DataStats st = compute_data_stats(values);
+
+  double scale_min = opts.min_value.value_or(st.min);
+  double scale_max = opts.max_value.value_or(st.max);
+  if (scale_min > scale_max) std::swap(scale_min, scale_max);
+
+  const bool signed_mode = opts.force_signed || (scale_min < 0.0);
+  if (opts.force_signed) {
+    if (scale_min > 0.0) scale_min = 0.0;
+    if (scale_max < 0.0) scale_max = 0.0;
+  }
+
+  double M = 1.0;
+  if (!signed_mode) {
+    double auto_max = std::max(0.0, st.max);
+    M = opts.max_value.value_or(auto_max);
+    if (M == 0.0) M = 1.0;
+    scale_min = 0.0;
+    scale_max = M;
+  }
+
+  int y_axis_cols = 0;
+  std::vector<std::string> y_prefix;
+  if (opts.show_y_axis) {
+    const int P = H * 4;
+    const double range = safe_range(scale_min, scale_max);
+    const int baseline = clamp_int(
+      static_cast<int>(std::lround(((0.0 - scale_min) / range) * P)),
+      0,
+      P
+    );
+    const int zero_row = clamp_int(H - 1 - (baseline / 4), 0, H - 1);
+
+    std::vector<std::string> labels(static_cast<size_t>(H));
+    std::vector<bool> has_label(static_cast<size_t>(H), false);
+    size_t max_label = 0;
+
+    std::vector<bool> want_label(static_cast<size_t>(H), false);
+    if (H <= 3) {
+      for (int row = 0; row < H; ++row) want_label[static_cast<size_t>(row)] = true;
+    } else {
+      want_label[0] = true;
+      want_label[static_cast<size_t>(H - 1)] = true;
+      for (int row = 1; row < H - 1; ++row) {
+        if (want_label[static_cast<size_t>(row - 1)]) continue;
+        if (want_label[static_cast<size_t>(row + 1)]) continue;
+        want_label[static_cast<size_t>(row)] = true;
+      }
+    }
+
+    const double step = range / H;
+    for (int row = 0; row < H; ++row) {
+      if (!want_label[static_cast<size_t>(row)]) continue;
+      if (signed_mode && row == zero_row) continue;
+
+      double v = scale_max - step * (row + 1);
+      std::string label;
+      if (opts.y_axis_fmt_is_int || fmt_expects_int(opts.y_axis_fmt)) {
+        label = format_int(opts.y_axis_fmt, static_cast<int>(std::lround(v)));
+      } else {
+        label = format_double(opts.y_axis_fmt, v);
+      }
+      if (label.empty()) continue;
+      max_label = std::max(max_label, label.size());
+      labels[static_cast<size_t>(row)] = std::move(label);
+      has_label[static_cast<size_t>(row)] = true;
+    }
+
+    const int tick_len = 3; // allows "___" for zero row when unlabeled
+    y_axis_cols = static_cast<int>(max_label) + 1 + tick_len; // label + space + tick
+    y_prefix.resize(static_cast<size_t>(H));
+    for (int row = 0; row < H; ++row) {
+      std::string label = labels[static_cast<size_t>(row)];
+      if (label.size() < max_label) {
+        label.insert(label.begin(), max_label - label.size(), ' ');
+      }
+      std::string tick = "   ";
+      if (row == zero_row) {
+        if (has_label[static_cast<size_t>(row)]) {
+          tick = "  _";
+        } else if (signed_mode) {
+          tick = "___";
+        }
+      } else if (has_label[static_cast<size_t>(row)]) {
+        tick = "  _";
+      }
+      y_prefix[static_cast<size_t>(row)] = label + " " + tick;
+    }
+  }
+
   const int usable_cols = std::max(1, out_cols_cap - y_axis_cols);
 
   // Each braille cell column represents 2 samples.
@@ -251,27 +391,8 @@ std::vector<std::string> render_chart(const Options& opts, const std::vector<dou
     samples = resample_maxbin(values, target_samples);
   }
 
-  const DataStats st = compute_data_stats(values);
-
-  double scale_min = opts.min_value.value_or(st.min);
-  double scale_max = opts.max_value.value_or(st.max);
-  if (scale_min > scale_max) std::swap(scale_min, scale_max);
-
-  const bool signed_mode = opts.force_signed || (scale_min < 0.0);
-  if (opts.force_signed) {
-    if (scale_min > 0.0) scale_min = 0.0;
-    if (scale_max < 0.0) scale_max = 0.0;
-  }
-
   if (signed_mode && (opts.width.kind != WidthSpec::Kind::Auto || n > target_samples)) {
     samples = resample_extreme_abs(values, target_samples);
-  }
-
-  double M = 1.0;
-  if (!signed_mode) {
-    double auto_max = std::max(0.0, st.max);
-    M = opts.max_value.value_or(auto_max);
-    if (M == 0.0) M = 1.0;
   }
 
   if (opts.debug) {
@@ -345,14 +466,71 @@ std::vector<std::string> render_chart(const Options& opts, const std::vector<dou
 
   auto lines = canvas.render_utf8();
 
-  if (opts.title) {
-    std::vector<std::string> out;
-    out.reserve(lines.size() + 1);
-    out.push_back(*opts.title);
+  std::vector<std::string> out;
+  out.reserve(lines.size() + (opts.title ? 1 : 0) + (opts.show_x_axis ? 2 : 0));
+
+  if (opts.title) out.push_back(*opts.title);
+
+  if (opts.show_y_axis && !y_prefix.empty()) {
+    for (size_t i = 0; i < lines.size(); ++i) {
+      out.push_back(y_prefix[i] + lines[i]);
+    }
+  } else {
     out.insert(out.end(), lines.begin(), lines.end());
-    return out;
   }
-  return lines;
+
+  if (opts.show_x_axis) {
+    const int width = cells_w;
+    std::string tick_line(static_cast<size_t>(width), ' ');
+    std::string label_line(static_cast<size_t>(width), ' ');
+
+    const int denom = std::max(1, n - 1);
+    struct Placement {
+      int col = 0;
+      int start = 0;
+      int end = 0;
+      std::string label;
+    };
+    std::vector<Placement> placements;
+
+    int col = width - 1;
+    std::string last_label;
+    while (col >= 0) {
+      double t = (width == 1) ? 0.0 : static_cast<double>(col) / (width - 1);
+      int idx = static_cast<int>(std::lround(t * denom));
+      int label_value = idx + 1;
+      std::string label = format_int(opts.x_axis_fmt, label_value);
+      if (label.empty()) {
+        --col;
+        continue;
+      }
+      if (label == last_label) {
+        --col;
+        continue;
+      }
+      int label_len = static_cast<int>(label.size());
+      int end = col;
+      int start = end - (label_len - 1);
+      if (start < 0) break;
+      placements.push_back(Placement{col, start, end, label});
+      last_label = label;
+      col = start - 2; // one space gap between labels
+    }
+
+    for (auto it = placements.rbegin(); it != placements.rend(); ++it) {
+      const auto& p = *it;
+      for (size_t k = 0; k < p.label.size(); ++k) {
+        label_line[static_cast<size_t>(p.start) + k] = p.label[k];
+      }
+      tick_line[static_cast<size_t>(p.col)] = '|';
+    }
+
+    std::string left_pad(static_cast<size_t>(y_axis_cols), ' ');
+    out.push_back(left_pad + tick_line);
+    out.push_back(left_pad + label_line);
+  }
+
+  return out;
 }
 
 } // namespace dotchart

@@ -26,9 +26,9 @@ static inline bool is_ws(char ch) {
   return ch == ' ' || ch == '\t' || ch == '\r' || ch == '\n';
 }
 
-std::vector<double> parse_values(const Options& opts, const std::string& text) {
-  std::vector<double> out;
-  out.reserve(1024);
+static ParsedValues parse_values_inner(const Options& opts, const std::string& text, bool capture_meta) {
+  ParsedValues parsed;
+  parsed.values.reserve(1024);
 
   auto is_delim = [&](char ch) -> bool {
     if (opts.field_sep != '\0') return ch == opts.field_sep;
@@ -49,30 +49,63 @@ std::vector<double> parse_values(const Options& opts, const std::string& text) {
 
     // parse [i, j)
     double v = 0.0;
+    bool parsed_value = false;
     // from_chars for float is C++17 but widely supported; if your libstdc++ is old,
     // fall back to strtod.
 #if defined(__cpp_lib_to_chars) && (__cpp_lib_to_chars >= 201611L)
     auto res = std::from_chars(s + i, s + j, v);
     if (res.ec == std::errc{} && res.ptr == s + j) {
-      out.push_back(v);
+      parsed_value = true;
     } else {
       // fallback: try strtod for cases like "1e-3"
       char* end = nullptr;
       std::string tmp(s + i, s + j);
       v = std::strtod(tmp.c_str(), &end);
-      if (end && *end == '\0') out.push_back(v);
+      if (end && *end == '\0') parsed_value = true;
     }
 #else
     char* end = nullptr;
     std::string tmp(s + i, s + j);
     v = std::strtod(tmp.c_str(), &end);
-    if (end && *end == '\0') out.push_back(v);
+    if (end && *end == '\0') parsed_value = true;
 #endif
+
+    if (parsed_value) {
+      parsed.values.push_back(v);
+      if (capture_meta && !parsed.has_first_token) {
+        std::string tok(s + i, s + j);
+        parsed.has_first_token = true;
+        parsed.first_has_exp = (tok.find('e') != std::string::npos) ||
+                               (tok.find('E') != std::string::npos);
+        size_t dot = tok.find('.');
+        if (dot == std::string::npos || parsed.first_has_exp) {
+          parsed.first_is_int = !parsed.first_has_exp;
+          parsed.first_precision = 0;
+        } else {
+          parsed.first_is_int = false;
+          size_t end = tok.find_first_of("eE", dot + 1);
+          if (end == std::string::npos) end = tok.size();
+          if (end > dot + 1) {
+            parsed.first_precision = static_cast<int>(end - (dot + 1));
+          } else {
+            parsed.first_precision = 0;
+          }
+        }
+      }
+    }
 
     i = j;
   }
 
-  return out;
+  return parsed;
+}
+
+std::vector<double> parse_values(const Options& opts, const std::string& text) {
+  return parse_values_inner(opts, text, false).values;
+}
+
+ParsedValues parse_values_with_meta(const Options& opts, const std::string& text) {
+  return parse_values_inner(opts, text, true);
 }
 
 } // namespace dotchart

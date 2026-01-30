@@ -31,6 +31,10 @@ struct Options {
   // Labels
   bool show_y_axis = false;
   std::string y_axis_fmt = "%3.0f ";     // printf-style
+  bool y_axis_fmt_explicit = false;
+  bool y_axis_fmt_is_int = false;
+  bool show_x_axis = false;
+  std::string x_axis_fmt = "%d";         // printf-style (index labels)
 
   // Output
   bool unicode = true;

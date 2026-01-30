@@ -25,7 +25,20 @@ int main(int argc, char** argv) {
 
   try {
     const auto text = read_all_input(pr.opts);
-    auto values = parse_values(pr.opts, text);
+    auto parsed = parse_values_with_meta(pr.opts, text);
+    auto values = std::move(parsed.values);
+
+    if (pr.opts.show_y_axis && !pr.opts.y_axis_fmt_explicit && parsed.has_first_token) {
+      if (parsed.first_has_exp) {
+        pr.opts.show_y_axis = false;
+      } else if (parsed.first_is_int) {
+        pr.opts.y_axis_fmt = "%d";
+        pr.opts.y_axis_fmt_is_int = true;
+      } else {
+        pr.opts.y_axis_fmt = "%." + std::to_string(parsed.first_precision) + "f";
+        pr.opts.y_axis_fmt_is_int = false;
+      }
+    }
 
     if (values.empty()) {
       std::cerr << "dotchart: no numeric values found in input.\n";
