@@ -23,7 +23,7 @@ TEST(InputParseValues, ParsesCustomSeparator) {
   RecordProperty("objective", "Explicit field separator overrides auto delimiter handling.");
   Options opts;
   opts.field_sep = '|';
-  const std::string text = "1|2|3|4";
+  const std::string text = "1|2|3|4\n";
   auto values = parse_values(opts, text);
   ASSERT_EQ(values.size(), 4u);
   EXPECT_DOUBLE_EQ(values[0], 1.0);

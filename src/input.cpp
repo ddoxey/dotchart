@@ -31,7 +31,10 @@ static ParsedValues parse_values_inner(const Options& opts, const std::string& t
   parsed.values.reserve(1024);
 
   auto is_delim = [&](char ch) -> bool {
-    if (opts.field_sep != '\0') return ch == opts.field_sep;
+    if (opts.field_sep != '\0') {
+      // Explicit separator still treats surrounding whitespace as delimiters.
+      return ch == opts.field_sep || is_ws(ch);
+    }
     // auto: commas or whitespace
     return ch == ',' || is_ws(ch);
   };
