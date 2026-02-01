@@ -62,6 +62,9 @@ Labels:
 
 Other:
       --no-unicode         ASCII fallback (placeholder)
+      --color              Enable ANSI color output (auto-detect)
+      --16-color           Force ANSI 16-color output
+      --256-color          Force ANSI 256-color output
   -h, --help               Show help
   -v, --version            Show version
   -d, --debug              Show debugging data
@@ -91,6 +94,9 @@ ParseResult parse_args(int argc, char** argv) {
     {"y-axis", optional_argument, nullptr, 'y'},
     {"y-fmt", required_argument, nullptr, 'Y'},
     {"no-unicode", no_argument, nullptr, 1000},
+    {"color", no_argument, nullptr, 1001},
+    {"16-color", no_argument, nullptr, 1002},
+    {"256-color", no_argument, nullptr, 1003},
     {"help", no_argument, nullptr, 'h'},
     {"version", no_argument, nullptr, 'v'},
     {"debug", no_argument, nullptr, 'd'},
@@ -193,6 +199,15 @@ ParseResult parse_args(int argc, char** argv) {
         break;
       case 1000:
         r.opts.unicode = false;
+        break;
+      case 1001:
+        r.opts.color_mode = Options::ColorMode::Auto;
+        break;
+      case 1002:
+        r.opts.color_mode = Options::ColorMode::Ansi16;
+        break;
+      case 1003:
+        r.opts.color_mode = Options::ColorMode::Ansi256;
         break;
       case 'h':
         r.opts.help = true;

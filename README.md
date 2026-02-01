@@ -116,6 +116,12 @@ Axes:
 Other:
 - `--no-unicode`  
   ASCII fallback (placeholder).
+- `--color`  
+  Enable ANSI color output (auto-detect).
+- `--16-color`  
+  Force ANSI 16-color output.
+- `--256-color`  
+  Force ANSI 256-color output.
 - `-h`, `--help`  
   Show help.
 - `-v`, `--version`  

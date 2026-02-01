@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
+#include <cstdlib>
 #include <iomanip>
 #include <iostream>
 #include <limits>
@@ -74,6 +75,92 @@ static double safe_range(double lo, double hi) {
   return (r > 0.0) ? r : 1.0;
 }
 
+static std::string ansi_color_256(int code) {
+  return "\x1b[38;5;" + std::to_string(code) + "m";
+}
+
+static std::string ansi_color_basic(int code) {
+  // Map 0..15 to standard 16-color foreground codes.
+  int c = std::clamp(code, 0, 15);
+  int ansi = (c < 8) ? (30 + c) : (90 + (c - 8));
+  return "\x1b[" + std::to_string(ansi) + "m";
+}
+
+static constexpr const char* ANSI_RESET = "\x1b[0m";
+
+static int ramp_color(double t, int c0, int c1) {
+  t = std::clamp(1.0 - t, 0.0, 1.0);
+  return static_cast<int>(std::lround(c0 + (c1 - c0) * t));
+}
+
+enum class RenderColorMode {
+  None,
+  Ansi16,
+  Ansi256
+};
+
+static bool env_contains(const char* v, const char* needle) {
+  if (!v || !needle) return false;
+  return std::string(v).find(needle) != std::string::npos;
+}
+
+static int detect_max_colors() {
+  const char* colors = std::getenv("TERM_COLORS");
+  if (colors && *colors) {
+    try {
+      return std::stoi(colors);
+    } catch (...) {
+      return 0;
+    }
+  }
+  const char* term = std::getenv("TERM");
+  const char* colorterm = std::getenv("COLORTERM");
+  if (term && std::string(term) == "dumb") return 0;
+  if (env_contains(term, "256color") || env_contains(colorterm, "256color") ||
+      env_contains(colorterm, "truecolor") || env_contains(colorterm, "24bit")) {
+    return 256;
+  }
+  return 16;
+}
+
+static RenderColorMode detect_color_mode(Options::ColorMode mode, int max_colors) {
+  if (mode == Options::ColorMode::Off) return RenderColorMode::None;
+  if (mode == Options::ColorMode::Ansi16) return RenderColorMode::Ansi16;
+  if (mode == Options::ColorMode::Ansi256) return RenderColorMode::Ansi256;
+  // Auto
+  const char* no_color = std::getenv("NO_COLOR");
+  if (no_color && *no_color) return RenderColorMode::None;
+  const char* clicolor = std::getenv("CLICOLOR");
+  if (clicolor && *clicolor == '0') return RenderColorMode::None;
+  const char* term = std::getenv("TERM");
+  const char* colorterm = std::getenv("COLORTERM");
+  if (term && std::string(term) == "dumb") return RenderColorMode::None;
+  if (env_contains(term, "256color") || env_contains(colorterm, "256color") ||
+      env_contains(colorterm, "truecolor") || env_contains(colorterm, "24bit")) {
+    return RenderColorMode::Ansi256;
+  }
+  if (max_colors > 0 && max_colors < 16) return RenderColorMode::None;
+  return RenderColorMode::Ansi16;
+}
+
+static std::string color_for_value(double v, double scale_min, double scale_max, RenderColorMode mode) {
+  if (mode == RenderColorMode::None) return std::string();
+  double denom = (v >= 0.0) ? ((scale_max > 0.0) ? scale_max : 1.0)
+                            : ((scale_min < 0.0) ? std::abs(scale_min) : 1.0);
+  double t = std::abs(v) / denom;
+  t = std::clamp(t, 0.0, 1.0);
+
+  if (mode == RenderColorMode::Ansi256) {
+    const int start = 125;
+    const int end = 159;
+    return ansi_color_256(ramp_color(t, start, end));
+  }
+
+  const int start = 1;
+  const int end = 14;
+  return ansi_color_basic(ramp_color(t, start, end));
+}
+
 static bool fmt_expects_int(const std::string& fmt) {
   bool saw_int = false;
   bool saw_float = false;
@@ -140,7 +227,9 @@ static void emit_debug_table(const Options& opts,
                              int input_points,
                              int resampled_points,
                              double scale_max,
-                             const DataStats& st) {
+                             const DataStats& st,
+                             RenderColorMode color_mode,
+                             int max_colors) {
   // Print to stderr so dotchart output stays pipeline-friendly.
   auto kv = [&](const char* k, const std::string& v) {
     std::cerr << std::left << std::setw(22) << k << v << "\n";
@@ -169,6 +258,11 @@ static void emit_debug_table(const Options& opts,
   kvd("data max", st.max);
   kvd("data max abs", st.max_abs);
   kvd("scale max used", scale_max);
+  const char* cm = (color_mode == RenderColorMode::Ansi256)
+                     ? "256"
+                     : (color_mode == RenderColorMode::Ansi16 ? "16" : "none");
+  kv("color mode", cm);
+  if (max_colors > 0) kvi("max colors", max_colors);
   std::cerr << "\n";
 }
 
@@ -395,6 +489,9 @@ std::vector<std::string> render_chart(const Options& opts, const std::vector<dou
     samples = resample_extreme_abs(values, target_samples);
   }
 
+  const int max_colors = detect_max_colors();
+  const RenderColorMode color_mode = detect_color_mode(opts.color_mode, max_colors);
+
   if (opts.debug) {
     emit_debug_table(opts,
                      ts,
@@ -406,7 +503,9 @@ std::vector<std::string> render_chart(const Options& opts, const std::vector<dou
                      static_cast<int>(values.size()),
                      static_cast<int>(samples.size()),
                      signed_mode ? scale_max : M,
-                     st);
+                     st,
+                     color_mode,
+                     max_colors);
     if (signed_mode) {
       const int P = H * 4;
       double range = scale_max - scale_min;
@@ -473,10 +572,26 @@ std::vector<std::string> render_chart(const Options& opts, const std::vector<dou
 
   if (opts.show_y_axis && !y_prefix.empty()) {
     for (size_t i = 0; i < lines.size(); ++i) {
-      out.push_back(y_prefix[i] + lines[i]);
+      if (color_mode != RenderColorMode::None) {
+        int row = static_cast<int>(i);
+        double v = scale_max - (safe_range(scale_min, scale_max) / H) * (row + 1);
+        std::string color = color_for_value(v, scale_min, scale_max, color_mode);
+        out.push_back(y_prefix[i] + color + lines[i] + ANSI_RESET);
+      } else {
+        out.push_back(y_prefix[i] + lines[i]);
+      }
     }
   } else {
-    out.insert(out.end(), lines.begin(), lines.end());
+    if (color_mode != RenderColorMode::None) {
+      for (size_t i = 0; i < lines.size(); ++i) {
+        int row = static_cast<int>(i);
+        double v = scale_max - (safe_range(scale_min, scale_max) / H) * (row + 1);
+        std::string color = color_for_value(v, scale_min, scale_max, color_mode);
+        out.push_back(color + lines[i] + ANSI_RESET);
+      }
+    } else {
+      out.insert(out.end(), lines.begin(), lines.end());
+    }
   }
 
   if (opts.show_x_axis) {

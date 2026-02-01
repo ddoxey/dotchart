@@ -38,6 +38,8 @@ struct Options {
 
   // Output
   bool unicode = true;
+  enum class ColorMode { Off, Auto, Ansi16, Ansi256 };
+  ColorMode color_mode = ColorMode::Off;
 
   // Misc
   bool help = false;
