@@ -75,6 +75,14 @@ static double safe_range(double lo, double hi) {
   return (r > 0.0) ? r : 1.0;
 }
 
+static int align_zero_baseline(int baseline, int max_pixels) {
+  int b = clamp_int(baseline, 0, max_pixels);
+  int aligned = (b / 4) * 4 + 1; // dots 3/6 row within the cell
+  if (aligned > max_pixels) aligned -= 4;
+  if (aligned < 0) aligned += 4;
+  return clamp_int(aligned, 0, max_pixels);
+}
+
 static std::string ansi_color_256(int code) {
   return "\x1b[38;5;" + std::to_string(code) + "m";
 }
@@ -390,11 +398,8 @@ std::vector<std::string> render_chart(const Options& opts, const std::vector<dou
   if (opts.show_y_axis) {
     const int P = H * 4;
     const double range = safe_range(scale_min, scale_max);
-    const int baseline = clamp_int(
-      static_cast<int>(std::lround(((0.0 - scale_min) / range) * P)),
-      0,
-      P
-    );
+    int baseline = static_cast<int>(std::lround(((0.0 - scale_min) / range) * P));
+    baseline = align_zero_baseline(baseline, P);
     const int zero_row = clamp_int(H - 1 - (baseline / 4), 0, H - 1);
 
     std::vector<std::string> labels(static_cast<size_t>(H));
@@ -414,12 +419,12 @@ std::vector<std::string> render_chart(const Options& opts, const std::vector<dou
       }
     }
 
-    const double step = range / H;
+    const double step = (H > 1) ? (range / (H - 1)) : 0.0;
     for (int row = 0; row < H; ++row) {
       if (!want_label[static_cast<size_t>(row)]) continue;
       if (signed_mode && row == zero_row) continue;
 
-      double v = scale_max - step * (row + 1);
+      double v = scale_max - step * row;
       std::string label;
       if (opts.y_axis_fmt_is_int || fmt_expects_int(opts.y_axis_fmt)) {
         label = format_int(opts.y_axis_fmt, static_cast<int>(std::lround(v)));
@@ -432,9 +437,12 @@ std::vector<std::string> render_chart(const Options& opts, const std::vector<dou
       has_label[static_cast<size_t>(row)] = true;
     }
 
-    const int tick_len = 3; // allows "___" for zero row when unlabeled
+    const int tick_len = 3; // allows "⠤⠤⠤" for zero row when unlabeled
     y_axis_cols = static_cast<int>(max_label) + 1 + tick_len; // label + space + tick
     y_prefix.resize(static_cast<size_t>(H));
+    const std::string zero_tick = utf8_encode(0x2824);   // dots 3 and 6 (row 3)
+    const std::string top_tick = utf8_encode(0x2809);    // dots 1 and 4 (row 1)
+    const std::string bottom_tick = utf8_encode(0x28C0); // dots 7 and 8 (row 4)
     for (int row = 0; row < H; ++row) {
       std::string label = labels[static_cast<size_t>(row)];
       if (label.size() < max_label) {
@@ -443,12 +451,14 @@ std::vector<std::string> render_chart(const Options& opts, const std::vector<dou
       std::string tick = "   ";
       if (row == zero_row) {
         if (has_label[static_cast<size_t>(row)]) {
-          tick = "  _";
+          tick = " " + zero_tick + zero_tick;
         } else if (signed_mode) {
-          tick = "___";
+          tick = zero_tick + zero_tick + zero_tick;
         }
       } else if (has_label[static_cast<size_t>(row)]) {
-        tick = "  _";
+        const std::string& mark =
+          (row == 0) ? top_tick : (row == H - 1 ? bottom_tick : zero_tick);
+        tick = " " + mark + mark;
       }
       y_prefix[static_cast<size_t>(row)] = label + " " + tick;
     }
@@ -511,7 +521,7 @@ std::vector<std::string> render_chart(const Options& opts, const std::vector<dou
       double range = scale_max - scale_min;
       if (!(range > 0.0)) range = 1.0;
       int baseline = static_cast<int>(std::lround(((0.0 - scale_min) / range) * P));
-      baseline = clamp_int(baseline, 0, P);
+      baseline = align_zero_baseline(baseline, P);
       std::cerr << std::left << std::setw(22) << "signed mode" << "yes" << "\n";
       std::cerr << std::left << std::setw(22) << "scale min" << scale_min << "\n";
       std::cerr << std::left << std::setw(22) << "scale max" << scale_max << "\n";
@@ -529,28 +539,45 @@ std::vector<std::string> render_chart(const Options& opts, const std::vector<dou
   // render only those samples (the width will already be tight).
   const int take = std::min(static_cast<int>(samples.size()), target_samples);
 
+  double range = safe_range(scale_min, scale_max);
+  int baseline = static_cast<int>(std::lround(((0.0 - scale_min) / range) * P));
+  baseline = align_zero_baseline(baseline, P);
+
   if (!signed_mode) {
     for (int i = 0; i < take; ++i) {
       int cx = i / 2;
       int px = i % 2;
       double v = samples[static_cast<size_t>(i)];
       double clamped = std::clamp(v, 0.0, M);
-      int pix = static_cast<int>(std::lround((clamped / M) * P));
-      canvas.set_bar_half(cx, px, pix);
+      if (std::abs(clamped) < 1e-12) {
+        set_bar_segment(canvas, cx, px, baseline, baseline + 1);
+        continue;
+      }
+      double y = (M > 0.0) ? (clamped / M) : 0.0;
+      int pos = baseline + static_cast<int>(std::lround(y * (P - baseline)));
+      pos = clamp_int(pos, 0, P);
+      set_bar_segment(canvas, cx, px, baseline, pos);
     }
   } else {
-    double range = scale_max - scale_min;
-    if (!(range > 0.0)) range = 1.0;
-    int baseline = static_cast<int>(std::lround(((0.0 - scale_min) / range) * P));
-    baseline = clamp_int(baseline, 0, P);
-
     for (int i = 0; i < take; ++i) {
       int cx = i / 2;
       int px = i % 2;
       double v = samples[static_cast<size_t>(i)];
       double clamped = std::clamp(v, scale_min, scale_max);
-      double y = ((clamped - scale_min) / range) * P; // pixels from bottom
-      int pos = static_cast<int>(std::lround(y));
+      if (std::abs(clamped) < 1e-12) {
+        set_bar_segment(canvas, cx, px, baseline, baseline + 1);
+        continue;
+      }
+      int pos = baseline;
+      if (clamped >= 0.0) {
+        double denom = (scale_max > 0.0) ? scale_max : 1.0;
+        double y = clamped / denom;
+        pos = baseline + static_cast<int>(std::lround(y * (P - baseline)));
+      } else {
+        double denom = (scale_min < 0.0) ? std::abs(scale_min) : 1.0;
+        double y = std::abs(clamped) / denom;
+        pos = baseline - static_cast<int>(std::lround(y * baseline));
+      }
       pos = clamp_int(pos, 0, P);
 
       if (clamped >= 0.0) {
@@ -574,7 +601,7 @@ std::vector<std::string> render_chart(const Options& opts, const std::vector<dou
     for (size_t i = 0; i < lines.size(); ++i) {
       if (color_mode != RenderColorMode::None) {
         int row = static_cast<int>(i);
-        double v = scale_max - (safe_range(scale_min, scale_max) / H) * (row + 1);
+      double v = scale_max - (safe_range(scale_min, scale_max) / H) * (row + 1);
         std::string color = color_for_value(v, scale_min, scale_max, color_mode);
         out.push_back(y_prefix[i] + color + lines[i] + ANSI_RESET);
       } else {
@@ -596,7 +623,8 @@ std::vector<std::string> render_chart(const Options& opts, const std::vector<dou
 
   if (opts.show_x_axis) {
     const int width = cells_w;
-    std::string tick_line(static_cast<size_t>(width), ' ');
+    const std::string tick_glyph = utf8_encode(0x28B0); // dots 5, 6, 8
+    std::vector<bool> tick_cols(static_cast<size_t>(width), false);
     std::string label_line(static_cast<size_t>(width), ' ');
 
     const int denom = std::max(1, n - 1);
@@ -637,10 +665,15 @@ std::vector<std::string> render_chart(const Options& opts, const std::vector<dou
       for (size_t k = 0; k < p.label.size(); ++k) {
         label_line[static_cast<size_t>(p.start) + k] = p.label[k];
       }
-      tick_line[static_cast<size_t>(p.col)] = '|';
+      tick_cols[static_cast<size_t>(p.col)] = true;
     }
 
     std::string left_pad(static_cast<size_t>(y_axis_cols), ' ');
+    std::string tick_line;
+    tick_line.reserve(static_cast<size_t>(width) * tick_glyph.size());
+    for (int i = 0; i < width; ++i) {
+      tick_line += tick_cols[static_cast<size_t>(i)] ? tick_glyph : " ";
+    }
     out.push_back(left_pad + tick_line);
     out.push_back(left_pad + label_line);
   }
