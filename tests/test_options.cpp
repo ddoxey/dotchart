@@ -1,9 +1,9 @@
-#include "options.h"
-
 #include <gtest/gtest.h>
 
 #include <string>
 #include <vector>
+
+#include "options.h"
 
 namespace dotchart {
 namespace {
@@ -17,7 +17,8 @@ static std::vector<char*> make_argv(std::vector<std::string>& storage) {
 }
 
 TEST(ParseArgs, YAxisNoFormatKeepsDefault) {
-  RecordProperty("objective", "Optional -y without format keeps default and no file.");
+  RecordProperty("objective",
+                 "Optional -y without format keeps default and no file.");
   std::vector<std::string> storage = {"dotchart", "-y"};
   auto argv = make_argv(storage);
   ParseResult r = parse_args(static_cast<int>(storage.size()), argv.data());
@@ -29,7 +30,8 @@ TEST(ParseArgs, YAxisNoFormatKeepsDefault) {
 }
 
 TEST(ParseArgs, YAxisFormatAsNextArg) {
-  RecordProperty("objective", "Optional -y consumes a following format string.");
+  RecordProperty("objective",
+                 "Optional -y consumes a following format string.");
   std::vector<std::string> storage = {"dotchart", "-y", "%0.1f"};
   auto argv = make_argv(storage);
   ParseResult r = parse_args(static_cast<int>(storage.size()), argv.data());
@@ -40,7 +42,8 @@ TEST(ParseArgs, YAxisFormatAsNextArg) {
 }
 
 TEST(ParseArgs, YAxisDoesNotConsumeFilename) {
-  RecordProperty("objective", "Optional -y does not consume non-format file arg.");
+  RecordProperty("objective",
+                 "Optional -y does not consume non-format file arg.");
   std::vector<std::string> storage = {"dotchart", "-y", "data.csv"};
   auto argv = make_argv(storage);
   ParseResult r = parse_args(static_cast<int>(storage.size()), argv.data());
@@ -53,7 +56,8 @@ TEST(ParseArgs, YAxisDoesNotConsumeFilename) {
 }
 
 TEST(ParseArgs, XAxisFormatAsNextArg) {
-  RecordProperty("objective", "Optional -x consumes a following format string.");
+  RecordProperty("objective",
+                 "Optional -x consumes a following format string.");
   std::vector<std::string> storage = {"dotchart", "-x", "%03d"};
   auto argv = make_argv(storage);
   ParseResult r = parse_args(static_cast<int>(storage.size()), argv.data());
