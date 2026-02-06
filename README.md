@@ -116,6 +116,8 @@ Axes:
 Other:
 - `--no-unicode`  
   ASCII fallback (placeholder).
+- `--style=bar|point`  
+  Render as bars (default) or points.
 - `--color`  
   Enable ANSI color output (auto-detect).
 - `--16-color`  

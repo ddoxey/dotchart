@@ -62,6 +62,7 @@ Labels:
 
 Other:
       --no-unicode         ASCII fallback (placeholder)
+      --style=bar|point    Render as bars (default) or points
       --color              Enable ANSI color output (auto-detect)
       --16-color           Force ANSI 16-color output
       --256-color          Force ANSI 256-color output
@@ -94,6 +95,7 @@ ParseResult parse_args(int argc, char** argv) {
     {"y-axis", optional_argument, nullptr, 'y'},
     {"y-fmt", required_argument, nullptr, 'Y'},
     {"no-unicode", no_argument, nullptr, 1000},
+    {"style", required_argument, nullptr, 1004},
     {"color", no_argument, nullptr, 1001},
     {"16-color", no_argument, nullptr, 1002},
     {"256-color", no_argument, nullptr, 1003},
@@ -200,6 +202,17 @@ ParseResult parse_args(int argc, char** argv) {
       case 1000:
         r.opts.unicode = false;
         break;
+      case 1004: {
+        std::string s = optarg ? optarg : "";
+        if (s == "bar") {
+          r.opts.style = Options::ChartStyle::Bar;
+        } else if (s == "point") {
+          r.opts.style = Options::ChartStyle::Point;
+        } else {
+          r.errors.push_back("'--style' expects 'bar' or 'point'.");
+        }
+        break;
+      }
       case 1001:
         r.opts.color_mode = Options::ColorMode::Auto;
         break;

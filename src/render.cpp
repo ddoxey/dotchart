@@ -534,6 +534,10 @@ std::vector<std::string> render_chart(const Options& opts, const std::vector<dou
   const int P = H * 4; // pixel rows
 
   BrailleCanvas canvas(cells_w, H);
+  const bool point_mode = (opts.style == Options::ChartStyle::Point);
+  auto set_point = [&](int cx, int px, int p) {
+    set_bar_segment(canvas, cx, px, p, p + 1);
+  };
 
   // We always render up to target_samples, but if auto+no-resample and samples shorter,
   // render only those samples (the width will already be tight).
@@ -549,6 +553,18 @@ std::vector<std::string> render_chart(const Options& opts, const std::vector<dou
       int px = i % 2;
       double v = samples[static_cast<size_t>(i)];
       double clamped = std::clamp(v, 0.0, M);
+      if (point_mode) {
+        if (std::abs(clamped) < 1e-12) {
+          set_point(cx, px, baseline);
+          continue;
+        }
+        double y = (M > 0.0) ? (clamped / M) : 0.0;
+        int pos = baseline + static_cast<int>(std::lround(y * (P - baseline)));
+        pos = clamp_int(pos, 0, P);
+        int p = std::max(baseline, pos - 1);
+        set_point(cx, px, p);
+        continue;
+      }
       if (std::abs(clamped) < 1e-12) {
         set_bar_segment(canvas, cx, px, baseline, baseline + 1);
         continue;
@@ -564,6 +580,28 @@ std::vector<std::string> render_chart(const Options& opts, const std::vector<dou
       int px = i % 2;
       double v = samples[static_cast<size_t>(i)];
       double clamped = std::clamp(v, scale_min, scale_max);
+      if (point_mode) {
+        if (std::abs(clamped) < 1e-12) {
+          set_point(cx, px, baseline);
+          continue;
+        }
+        int pos = baseline;
+        if (clamped >= 0.0) {
+          double denom = (scale_max > 0.0) ? scale_max : 1.0;
+          double y = clamped / denom;
+          pos = baseline + static_cast<int>(std::lround(y * (P - baseline)));
+          pos = clamp_int(pos, 0, P);
+          int p = std::max(baseline, pos - 1);
+          set_point(cx, px, p);
+        } else {
+          double denom = (scale_min < 0.0) ? std::abs(scale_min) : 1.0;
+          double y = std::abs(clamped) / denom;
+          pos = baseline - static_cast<int>(std::lround(y * baseline));
+          pos = clamp_int(pos, 0, P);
+          set_point(cx, px, pos);
+        }
+        continue;
+      }
       if (std::abs(clamped) < 1e-12) {
         set_bar_segment(canvas, cx, px, baseline, baseline + 1);
         continue;

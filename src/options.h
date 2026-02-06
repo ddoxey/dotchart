@@ -13,6 +13,8 @@ struct WidthSpec {
 };
 
 struct Options {
+  enum class ChartStyle { Bar, Point };
+
   // Input
   char field_sep = '\0';                 // '\0' => auto (comma + whitespace)
   std::optional<std::string> file;       // if unset, read stdin
@@ -38,6 +40,7 @@ struct Options {
 
   // Output
   bool unicode = true;
+  ChartStyle style = ChartStyle::Bar;
   enum class ColorMode { Off, Auto, Ansi16, Ansi256 };
   ColorMode color_mode = ColorMode::Off;
 

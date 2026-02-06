@@ -116,6 +116,37 @@ TEST_F(RenderChartTest, LabeledCuratedSineOutput) {
   }
 }
 
+TEST_F(RenderChartTest, LabeledCuratedSinePointOutput) {
+  RecordProperty("objective", "Curated sine sample renders expected point chart with axis labels.");
+  Options opts;
+  opts.show_x_axis = true;
+  opts.show_y_axis = true;
+  opts.y_axis_fmt = "%.6f";
+  opts.y_axis_fmt_is_int = false;
+  opts.style = Options::ChartStyle::Point;
+  auto lines = render_chart(opts, curated_sine());
+
+  std::vector<std::string> expected = {
+    from_u8(u8" 1.000000  ⠉⠉⠀⠀⠀⠀⠀⠀⠀⠀⡠⠔⠒⠉⠉⠉⠑⠒⠤⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀"),
+    from_u8(u8"             ⠀⠀⠀⠀⠀⢀⠔⠉⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠑⢄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀"),
+    from_u8(u8" 0.555556  ⠤⠤⠀⠀⠀⢀⠔⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠑⢄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀"),
+    from_u8(u8"             ⠀⢀⠔⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠑⢄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀"),
+    from_u8(u8"          ⠤⠤⠤⠤⠂⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠢⢄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀"),
+    from_u8(u8"             ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠢⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⡠⠂"),
+    from_u8(u8"-0.333333  ⠤⠤⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⢄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⠌⠀⠀"),
+    from_u8(u8"             ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠑⢄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⠔⠁⠀⠀⠀"),
+    from_u8(u8"             ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠑⢄⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⠔⠁⠀⠀⠀⠀⠀"),
+    from_u8(u8"-1.000000  ⣀⣀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠉⠢⠤⣀⣀⣀⡠⠤⠊⠁⠀⠀⠀⠀⠀⠀⠀"),
+    from_u8(u8"              ⢰ ⢰  ⢰  ⢰  ⢰  ⢰  ⢰  ⢰  ⢰  ⢰  ⢰  ⢰  ⢰  ⢰  ⢰  ⢰   ⢰"),
+    from_u8(u8"              3 7 13 19 25 31 37 43 49 56 62 68 74 80 86 92 100"),
+  };
+
+  ASSERT_EQ(lines.size(), expected.size());
+  for (size_t i = 0; i < expected.size(); ++i) {
+    EXPECT_EQ(lines[i], expected[i]) << "line " << i;
+  }
+}
+
 TEST(RenderChart, ZeroLineHeightThree) {
   RecordProperty("objective", "Zero line uses second dot row with height=3.");
   Options opts;
