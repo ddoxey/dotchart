@@ -110,8 +110,6 @@ Axes:
   Show x-axis labels (default format: `%d`).
 - `-y`, `--y-axis[=FMT]`  
   Show y-axis labels (default format: `%3.0f `, or auto-derived from input when no format is given).
-- `-Y`, `--y-fmt FMT`  
-  Explicit y label format (legacy; overrides auto).
 
 Other:
 - `--no-unicode`  

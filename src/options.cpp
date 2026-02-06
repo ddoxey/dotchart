@@ -13,6 +13,12 @@
 
 namespace dotchart {
 
+static bool looks_like_format_arg(const char* s) {
+  if (!s || *s == '\0') return false;
+  if (s[0] == '-') return false;
+  return std::strchr(s, '%') != nullptr;
+}
+
 static bool parse_int(const char* s, int& out) {
   char* end = nullptr;
   long v = std::strtol(s, &end, 10);
@@ -58,7 +64,6 @@ Scaling:
 Labels:
   -x, --x-axis[=FMT]       Show x-axis labels (default format: "%d")
   -y, --y-axis[=FMT]       Show y-axis labels (default format: "%3.0f ")
-  -Y, --y-fmt FMT          printf-style y label format (legacy)
 
 Other:
       --no-unicode         ASCII fallback (placeholder)
@@ -72,7 +77,7 @@ Other:
 
 Examples:
   echo "1,10,20,10,1" | dotchart -F,
-  dotchart -W 120 -H 8 -M 100 -y -Y "$%+4.0f " values.csv
+  dotchart -W 120 -H 8 -M 100 -y "$%+4.0f " values.csv
 )";
 }
 
@@ -80,7 +85,7 @@ ParseResult parse_args(int argc, char** argv) {
   ParseResult r;
 
 #if defined(__unix__) || defined(__APPLE__)
-  const char* short_opts = "F:f:c:W:H:T:M:m:SxyY:hvd";
+  const char* short_opts = "F:f:c:W:H:T:M:m:Sx::y::hvd";
   static option long_opts[] = {{"field-sep", required_argument, nullptr, 'F'},
                                {"file", required_argument, nullptr, 'f'},
                                {"column", required_argument, nullptr, 'c'},
@@ -92,7 +97,6 @@ ParseResult parse_args(int argc, char** argv) {
                                {"signed", no_argument, nullptr, 'S'},
                                {"x-axis", optional_argument, nullptr, 'x'},
                                {"y-axis", optional_argument, nullptr, 'y'},
-                               {"y-fmt", required_argument, nullptr, 'Y'},
                                {"no-unicode", no_argument, nullptr, 1000},
                                {"style", required_argument, nullptr, 1004},
                                {"color", no_argument, nullptr, 1001},
@@ -201,18 +205,23 @@ ParseResult parse_args(int argc, char** argv) {
         break;
       case 'x':
         r.opts.show_x_axis = true;
-        if (optarg && *optarg) r.opts.x_axis_fmt = std::string(optarg);
+        if (optarg && *optarg) {
+          r.opts.x_axis_fmt = std::string(optarg);
+        } else if (optind < argc && looks_like_format_arg(argv[optind])) {
+          r.opts.x_axis_fmt = std::string(argv[optind]);
+          ++optind;
+        }
         break;
       case 'y':
         r.opts.show_y_axis = true;
         if (optarg && *optarg) {
           r.opts.y_axis_fmt = std::string(optarg);
           r.opts.y_axis_fmt_explicit = true;
+        } else if (optind < argc && looks_like_format_arg(argv[optind])) {
+          r.opts.y_axis_fmt = std::string(argv[optind]);
+          r.opts.y_axis_fmt_explicit = true;
+          ++optind;
         }
-        break;
-      case 'Y':
-        r.opts.y_axis_fmt = std::string(optarg);
-        r.opts.y_axis_fmt_explicit = true;
         break;
       case 1000:
         r.opts.unicode = false;

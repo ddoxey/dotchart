@@ -51,6 +51,7 @@ if (BUILD_TESTING)
   add_executable(dotchart_tests
     tests/test_braille.cpp
     tests/test_input.cpp
+    tests/test_options.cpp
     tests/test_render.cpp
   )
   target_link_libraries(dotchart_tests PRIVATE GTest::gtest_main dotchart_lib)
