@@ -463,14 +463,14 @@ std::vector<std::string> render_chart(const Options& opts,
       std::string tick = "   ";
       if (row == zero_row) {
         if (has_label[static_cast<size_t>(row)]) {
-          tick = " " + zero_tick + zero_tick;
+          tick = zero_tick + zero_tick + " ";
         } else if (signed_mode) {
           tick = zero_tick + zero_tick + zero_tick;
         }
       } else if (has_label[static_cast<size_t>(row)]) {
         const std::string& mark =
             (row == 0) ? top_tick : (row == H - 1 ? bottom_tick : zero_tick);
-        tick = " " + mark + mark;
+        tick = mark + mark + " ";
       }
       y_prefix[static_cast<size_t>(row)] = label + " " + tick;
     }
