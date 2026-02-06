@@ -1,12 +1,13 @@
-#include "input.h"
-
 #include <gtest/gtest.h>
+
+#include "input.h"
 
 namespace dotchart {
 namespace {
 
 TEST(InputParseValues, ParsesCommaAndWhitespace) {
-  RecordProperty("objective", "Auto delimiter parsing accepts commas and whitespace.");
+  RecordProperty("objective",
+                 "Auto delimiter parsing accepts commas and whitespace.");
   Options opts;
   opts.field_sep = '\0';
   const std::string text = "1, 2  3\n4\t5";
@@ -20,7 +21,8 @@ TEST(InputParseValues, ParsesCommaAndWhitespace) {
 }
 
 TEST(InputParseValues, ParsesCustomSeparator) {
-  RecordProperty("objective", "Explicit field separator overrides auto delimiter handling.");
+  RecordProperty("objective",
+                 "Explicit field separator overrides auto delimiter handling.");
   Options opts;
   opts.field_sep = '|';
   const std::string text = "1|2|3|4\n";
@@ -31,7 +33,8 @@ TEST(InputParseValues, ParsesCustomSeparator) {
 }
 
 TEST(InputParseValues, SkipsInvalidTokens) {
-  RecordProperty("objective", "Malformed tokens are ignored without failing parsing.");
+  RecordProperty("objective",
+                 "Malformed tokens are ignored without failing parsing.");
   Options opts;
   const std::string text = "1, x, 2, nope, 3";
   auto values = parse_values(opts, text);
@@ -41,5 +44,5 @@ TEST(InputParseValues, SkipsInvalidTokens) {
   EXPECT_DOUBLE_EQ(values[2], 3.0);
 }
 
-} // namespace
-} // namespace dotchart
+}  // namespace
+}  // namespace dotchart

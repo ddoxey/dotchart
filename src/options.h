@@ -16,27 +16,27 @@ struct Options {
   enum class ChartStyle { Bar, Point };
 
   // Input
-  char field_sep = '\0';                 // '\0' => auto (comma + whitespace)
-  std::optional<std::string> file;       // if unset, read stdin
-  std::optional<int> column;             // 1-based column selection (optional; future)
+  char field_sep = '\0';            // '\0' => auto (comma + whitespace)
+  std::optional<std::string> file;  // if unset, read stdin
+  std::optional<int> column;  // 1-based column selection (optional; future)
 
   // Layout
   WidthSpec width;  // columns
-  int height = 9;  // braille cell rows (each is 4 dot rows)
+  int height = 9;   // braille cell rows (each is 4 dot rows)
   std::optional<std::string> title;
 
   // Scaling
-  std::optional<double> min_value;       // forced min (optional)
-  std::optional<double> max_value;       // forced max (optional)
-  bool force_signed = false;             // show baseline even if no negatives
+  std::optional<double> min_value;  // forced min (optional)
+  std::optional<double> max_value;  // forced max (optional)
+  bool force_signed = false;        // show baseline even if no negatives
 
   // Labels
   bool show_y_axis = false;
-  std::string y_axis_fmt = "%3.0f ";     // printf-style
+  std::string y_axis_fmt = "%3.0f ";  // printf-style
   bool y_axis_fmt_explicit = false;
   bool y_axis_fmt_is_int = false;
   bool show_x_axis = false;
-  std::string x_axis_fmt = "%d";         // printf-style (index labels)
+  std::string x_axis_fmt = "%d";  // printf-style (index labels)
 
   // Output
   bool unicode = true;
@@ -59,4 +59,4 @@ ParseResult parse_args(int argc, char** argv);
 std::string help_text();
 std::string version_text();
 
-} // namespace dotchart
+}  // namespace dotchart

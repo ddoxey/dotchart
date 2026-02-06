@@ -26,7 +26,9 @@ static inline bool is_ws(char ch) {
   return ch == ' ' || ch == '\t' || ch == '\r' || ch == '\n';
 }
 
-static ParsedValues parse_values_inner(const Options& opts, const std::string& text, bool capture_meta) {
+static ParsedValues parse_values_inner(const Options& opts,
+                                       const std::string& text,
+                                       bool capture_meta) {
   ParsedValues parsed;
   parsed.values.reserve(1024);
 
@@ -53,8 +55,8 @@ static ParsedValues parse_values_inner(const Options& opts, const std::string& t
     // parse [i, j)
     double v = 0.0;
     bool parsed_value = false;
-    // from_chars for float is C++17 but widely supported; if your libstdc++ is old,
-    // fall back to strtod.
+    // from_chars for float is C++17 but widely supported; if your libstdc++ is
+    // old, fall back to strtod.
 #if defined(__cpp_lib_to_chars) && (__cpp_lib_to_chars >= 201611L)
     auto res = std::from_chars(s + i, s + j, v);
     if (res.ec == std::errc{} && res.ptr == s + j) {
@@ -107,8 +109,9 @@ std::vector<double> parse_values(const Options& opts, const std::string& text) {
   return parse_values_inner(opts, text, false).values;
 }
 
-ParsedValues parse_values_with_meta(const Options& opts, const std::string& text) {
+ParsedValues parse_values_with_meta(const Options& opts,
+                                    const std::string& text) {
   return parse_values_inner(opts, text, true);
 }
 
-} // namespace dotchart
+}  // namespace dotchart

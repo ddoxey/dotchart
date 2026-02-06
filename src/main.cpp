@@ -1,8 +1,8 @@
-#include "options.h"
-#include "input.h"
-#include "render.h"
-
 #include <iostream>
+
+#include "input.h"
+#include "options.h"
+#include "render.h"
 
 int main(int argc, char** argv) {
   using namespace dotchart;
@@ -28,14 +28,16 @@ int main(int argc, char** argv) {
     auto parsed = parse_values_with_meta(pr.opts, text);
     auto values = std::move(parsed.values);
 
-    if (pr.opts.show_y_axis && !pr.opts.y_axis_fmt_explicit && parsed.has_first_token) {
+    if (pr.opts.show_y_axis && !pr.opts.y_axis_fmt_explicit &&
+        parsed.has_first_token) {
       if (parsed.first_has_exp) {
         pr.opts.show_y_axis = false;
       } else if (parsed.first_is_int) {
         pr.opts.y_axis_fmt = "%d";
         pr.opts.y_axis_fmt_is_int = true;
       } else {
-        pr.opts.y_axis_fmt = "%." + std::to_string(parsed.first_precision) + "f";
+        pr.opts.y_axis_fmt =
+            "%." + std::to_string(parsed.first_precision) + "f";
         pr.opts.y_axis_fmt_is_int = false;
       }
     }

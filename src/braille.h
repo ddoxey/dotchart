@@ -8,7 +8,7 @@ namespace dotchart {
 // Braille is a 2x4 dot cell. We store per-cell dot masks (8 bits).
 // Code point = 0x2800 + mask.
 class BrailleCanvas {
-public:
+ public:
   BrailleCanvas(int width_cells, int height_cells);
 
   int width() const { return m_w; }
@@ -25,16 +25,16 @@ public:
   // Render rows of UTF-8 strings, top-to-bottom.
   std::vector<std::string> render_utf8() const;
 
-private:
+ private:
   int m_w = 0;
   int m_h = 0;
-  std::vector<uint8_t> m_mask; // m_h * m_w
+  std::vector<uint8_t> m_mask;  // m_h * m_w
 
   uint8_t& cell(int x, int y) { return m_mask[y * m_w + x]; }
-  uint8_t  cell(int x, int y) const { return m_mask[y * m_w + x]; }
+  uint8_t cell(int x, int y) const { return m_mask[y * m_w + x]; }
 };
 
 // Encode a single Unicode codepoint (<= 0x10FFFF) into UTF-8.
 std::string utf8_encode(char32_t cp);
 
-} // namespace dotchart
+}  // namespace dotchart

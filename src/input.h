@@ -1,7 +1,8 @@
 #pragma once
-#include "options.h"
 #include <string>
 #include <vector>
+
+#include "options.h"
 
 namespace dotchart {
 
@@ -19,6 +20,7 @@ struct ParsedValues {
 // Parse doubles from input, supporting comma/whitespace delimiters.
 // v0 ignores columns; future can support column selection.
 std::vector<double> parse_values(const Options& opts, const std::string& text);
-ParsedValues parse_values_with_meta(const Options& opts, const std::string& text);
+ParsedValues parse_values_with_meta(const Options& opts,
+                                    const std::string& text);
 
-} // namespace dotchart
+}  // namespace dotchart
