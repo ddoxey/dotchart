@@ -623,7 +623,7 @@ std::vector<std::string> render_chart(const Options& opts, const std::vector<dou
         set_bar_segment(canvas, cx, px, baseline, end);
       } else {
         int start = std::min(baseline, pos);
-        set_bar_segment(canvas, cx, px, start, baseline);
+        set_bar_segment(canvas, cx, px, start, baseline + 1);
       }
     }
   }
