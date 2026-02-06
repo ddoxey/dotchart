@@ -93,7 +93,7 @@ Layout:
 - `-W`, `--width COLS|PCT%`  
   Output width. Default: fit-to-data, capped by terminal width.
 - `-H`, `--height ROWS`  
-  Output height in braille rows (default: 10).
+  Output height in braille rows (default: 9).
 - `-T`, `--title TEXT`  
   Title printed above the chart.
 

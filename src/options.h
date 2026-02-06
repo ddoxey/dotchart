@@ -22,7 +22,7 @@ struct Options {
 
   // Layout
   WidthSpec width;  // columns
-  int height = 10;  // braille cell rows (each is 4 dot rows)
+  int height = 9;  // braille cell rows (each is 4 dot rows)
   std::optional<std::string> title;
 
   // Scaling

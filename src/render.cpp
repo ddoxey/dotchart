@@ -159,8 +159,8 @@ static std::string color_for_value(double v, double scale_min, double scale_max,
   t = std::clamp(t, 0.0, 1.0);
 
   if (mode == RenderColorMode::Ansi256) {
-    const int start = 125;
-    const int end = 159;
+    const int start = 196;
+    const int end = 231;
     return ansi_color_256(ramp_color(t, start, end));
   }
 
@@ -635,12 +635,18 @@ std::vector<std::string> render_chart(const Options& opts, const std::vector<dou
 
   if (opts.title) out.push_back(*opts.title);
 
+  const double range_color = safe_range(scale_min, scale_max);
+  const int zero_row = signed_mode ? (H - 1 - (baseline / 4)) : -1;
+
   if (opts.show_y_axis && !y_prefix.empty()) {
     for (size_t i = 0; i < lines.size(); ++i) {
       if (color_mode != RenderColorMode::None) {
         int row = static_cast<int>(i);
-      double v = scale_max - (safe_range(scale_min, scale_max) / H) * (row + 1);
-        std::string color = color_for_value(v, scale_min, scale_max, color_mode);
+        double t = (H > 1) ? (static_cast<double>(row) / static_cast<double>(H - 1)) : 0.0;
+        double v = scale_max - range_color * t;
+        std::string color = (signed_mode && row == zero_row)
+                              ? std::string()
+                              : color_for_value(v, scale_min, scale_max, color_mode);
         out.push_back(y_prefix[i] + color + lines[i] + ANSI_RESET);
       } else {
         out.push_back(y_prefix[i] + lines[i]);
@@ -650,8 +656,11 @@ std::vector<std::string> render_chart(const Options& opts, const std::vector<dou
     if (color_mode != RenderColorMode::None) {
       for (size_t i = 0; i < lines.size(); ++i) {
         int row = static_cast<int>(i);
-        double v = scale_max - (safe_range(scale_min, scale_max) / H) * (row + 1);
-        std::string color = color_for_value(v, scale_min, scale_max, color_mode);
+        double t = (H > 1) ? (static_cast<double>(row) / static_cast<double>(H - 1)) : 0.0;
+        double v = scale_max - range_color * t;
+        std::string color = (signed_mode && row == zero_row)
+                              ? std::string()
+                              : color_for_value(v, scale_min, scale_max, color_mode);
         out.push_back(color + lines[i] + ANSI_RESET);
       }
     } else {

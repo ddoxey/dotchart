@@ -47,7 +47,7 @@ Input:
 
 Layout:
   -W, --width COLS|PCT%   Output width (default: fit-to-data; capped by tty width)
-  -H, --height ROWS        Output height in braille rows (default: 10)
+  -H, --height ROWS        Output height in braille rows (default: 9)
   -T, --title TEXT         Title printed above the chart
 
 Scaling:
