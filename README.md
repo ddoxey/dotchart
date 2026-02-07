@@ -69,6 +69,12 @@ Note: alignment depends on a monospace font with Braille support. GitHub’s cod
 blocks use a monospace font, but some fonts render Braille blanks with uneven
 spacing.
 
+## Color Example
+
+MSFT close history (10+ years) rendered with a custom color ramp:
+
+![MSFT chart](utils/history_MSFT_chart.png)
+
 ## Command Line Options
 
 Usage:
