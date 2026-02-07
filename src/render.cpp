@@ -154,12 +154,20 @@ static RenderColorMode detect_color_mode(Options::ColorMode mode,
 }
 
 static std::string color_for_value(double v, double scale_min, double scale_max,
-                                   RenderColorMode mode) {
+                                   RenderColorMode mode,
+                                   const std::vector<int>& ramp) {
   if (mode == RenderColorMode::None) return std::string();
   double denom = (v >= 0.0) ? ((scale_max > 0.0) ? scale_max : 1.0)
                             : ((scale_min < 0.0) ? std::abs(scale_min) : 1.0);
   double t = std::abs(v) / denom;
   t = std::clamp(t, 0.0, 1.0);
+
+  if (!ramp.empty()) {
+    if (ramp.size() == 1) return ansi_color_256(ramp.front());
+    int idx = static_cast<int>(std::lround(t * (ramp.size() - 1)));
+    idx = clamp_int(idx, 0, static_cast<int>(ramp.size() - 1));
+    return ansi_color_256(ramp[static_cast<size_t>(idx)]);
+  }
 
   if (mode == RenderColorMode::Ansi256) {
     const int start = 196;
@@ -656,10 +664,10 @@ std::vector<std::string> render_chart(const Options& opts,
                        ? (static_cast<double>(row) / static_cast<double>(H - 1))
                        : 0.0;
         double v = scale_max - range_color * t;
-        std::string color =
-            (signed_mode && row == zero_row)
-                ? std::string()
-                : color_for_value(v, scale_min, scale_max, color_mode);
+        std::string color = (signed_mode && row == zero_row)
+                                ? std::string()
+                                : color_for_value(v, scale_min, scale_max,
+                                                  color_mode, opts.color_ramp);
         out.push_back(y_prefix[i] + color + lines[i] + ANSI_RESET);
       } else {
         out.push_back(y_prefix[i] + lines[i]);
@@ -673,10 +681,10 @@ std::vector<std::string> render_chart(const Options& opts,
                        ? (static_cast<double>(row) / static_cast<double>(H - 1))
                        : 0.0;
         double v = scale_max - range_color * t;
-        std::string color =
-            (signed_mode && row == zero_row)
-                ? std::string()
-                : color_for_value(v, scale_min, scale_max, color_mode);
+        std::string color = (signed_mode && row == zero_row)
+                                ? std::string()
+                                : color_for_value(v, scale_min, scale_max,
+                                                  color_mode, opts.color_ramp);
         out.push_back(color + lines[i] + ANSI_RESET);
       }
     } else {

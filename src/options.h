@@ -43,6 +43,7 @@ struct Options {
   ChartStyle style = ChartStyle::Bar;
   enum class ColorMode { Off, Auto, Ansi16, Ansi256 };
   ColorMode color_mode = ColorMode::Off;
+  std::vector<int> color_ramp;
 
   // Misc
   bool help = false;

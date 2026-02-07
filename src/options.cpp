@@ -38,6 +38,64 @@ static bool parse_double(const char* s, double& out) {
   return true;
 }
 
+static bool looks_like_color_arg(const char* s) {
+  if (!s || *s == '\0') return false;
+  if (s[0] == '-') return false;
+  return (std::strstr(s, "..") != nullptr) || (std::strchr(s, ',') != nullptr);
+}
+
+static bool parse_color_spec(const std::string& spec, std::vector<int>& out,
+                             std::string& err) {
+  out.clear();
+  if (spec.find("..") != std::string::npos) {
+    size_t pos = spec.find("..");
+    if (spec.find("..", pos + 2) != std::string::npos) {
+      err = "'--color' range expects a single \"a..b\" pair.";
+      return false;
+    }
+    std::string a_str = spec.substr(0, pos);
+    std::string b_str = spec.substr(pos + 2);
+    int a = 0;
+    int b = 0;
+    if (!parse_int(a_str.c_str(), a) || !parse_int(b_str.c_str(), b)) {
+      err = "'--color' range expects integers (e.g. 196..231).";
+      return false;
+    }
+    if (a < 0 || a > 255 || b < 0 || b > 255) {
+      err = "'--color' range must be within 0..255.";
+      return false;
+    }
+    int step = (a <= b) ? 1 : -1;
+    for (int v = a; v != b; v += step) out.push_back(v);
+    out.push_back(b);
+    return true;
+  }
+
+  size_t start = 0;
+  while (start < spec.size()) {
+    size_t comma = spec.find(',', start);
+    std::string token = spec.substr(
+        start, comma == std::string::npos ? std::string::npos : comma - start);
+    int v = 0;
+    if (!parse_int(token.c_str(), v)) {
+      err = "'--color' list expects integers (e.g. 160,167,174).";
+      return false;
+    }
+    if (v < 0 || v > 255) {
+      err = "'--color' list values must be within 0..255.";
+      return false;
+    }
+    out.push_back(v);
+    if (comma == std::string::npos) break;
+    start = comma + 1;
+  }
+  if (out.size() < 2) {
+    err = "'--color' list expects at least two values.";
+    return false;
+  }
+  return true;
+}
+
 std::string version_text() { return "dotchart 0.1.0"; }
 
 std::string help_text() {
@@ -68,7 +126,8 @@ Labels:
 Other:
       --no-unicode         ASCII fallback (placeholder)
       --style=bar|point    Render as bars (default) or points
-      --color              Enable ANSI color output (auto-detect)
+      --color[=SPEC]       Enable ANSI color output (auto-detect)
+                           SPEC: "a..b" or "a,b,c" for 256-color ramp
       --16-color           Force ANSI 16-color output
       --256-color          Force ANSI 256-color output
   -h, --help               Show help
@@ -99,7 +158,7 @@ ParseResult parse_args(int argc, char** argv) {
                                {"y-axis", optional_argument, nullptr, 'y'},
                                {"no-unicode", no_argument, nullptr, 1000},
                                {"style", required_argument, nullptr, 1004},
-                               {"color", no_argument, nullptr, 1001},
+                               {"color", optional_argument, nullptr, 1001},
                                {"16-color", no_argument, nullptr, 1002},
                                {"256-color", no_argument, nullptr, 1003},
                                {"help", no_argument, nullptr, 'h'},
@@ -239,6 +298,22 @@ ParseResult parse_args(int argc, char** argv) {
       }
       case 1001:
         r.opts.color_mode = Options::ColorMode::Auto;
+        if (optarg && *optarg) {
+          std::string err;
+          if (!parse_color_spec(optarg, r.opts.color_ramp, err)) {
+            r.errors.push_back(err);
+          } else {
+            r.opts.color_mode = Options::ColorMode::Ansi256;
+          }
+        } else if (optind < argc && looks_like_color_arg(argv[optind])) {
+          std::string err;
+          if (!parse_color_spec(argv[optind], r.opts.color_ramp, err)) {
+            r.errors.push_back(err);
+          } else {
+            r.opts.color_mode = Options::ColorMode::Ansi256;
+            ++optind;
+          }
+        }
         break;
       case 1002:
         r.opts.color_mode = Options::ColorMode::Ansi16;

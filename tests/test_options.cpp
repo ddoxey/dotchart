@@ -66,5 +66,42 @@ TEST(ParseArgs, XAxisFormatAsNextArg) {
   EXPECT_EQ(r.opts.x_axis_fmt, "%03d");
 }
 
+TEST(ParseArgs, ColorRangeSpec) {
+  RecordProperty("objective",
+                 "--color range sets 256-color ramp and enables color.");
+  std::vector<std::string> storage = {"dotchart", "--color", "160..195"};
+  auto argv = make_argv(storage);
+  ParseResult r = parse_args(static_cast<int>(storage.size()), argv.data());
+  ASSERT_TRUE(r.errors.empty());
+  EXPECT_EQ(r.opts.color_mode, Options::ColorMode::Ansi256);
+  ASSERT_EQ(r.opts.color_ramp.size(), 36u);
+  EXPECT_EQ(r.opts.color_ramp.front(), 160);
+  EXPECT_EQ(r.opts.color_ramp.back(), 195);
+}
+
+TEST(ParseArgs, ColorListSpec) {
+  RecordProperty("objective", "--color list sets explicit 256-color ramp.");
+  std::vector<std::string> storage = {"dotchart", "--color", "160,167,174,181"};
+  auto argv = make_argv(storage);
+  ParseResult r = parse_args(static_cast<int>(storage.size()), argv.data());
+  ASSERT_TRUE(r.errors.empty());
+  EXPECT_EQ(r.opts.color_mode, Options::ColorMode::Ansi256);
+  std::vector<int> expected = {160, 167, 174, 181};
+  EXPECT_EQ(r.opts.color_ramp, expected);
+}
+
+TEST(ParseArgs, ColorDoesNotConsumeFilename) {
+  RecordProperty("objective",
+                 "--color without spec does not consume file argument.");
+  std::vector<std::string> storage = {"dotchart", "--color", "data.csv"};
+  auto argv = make_argv(storage);
+  ParseResult r = parse_args(static_cast<int>(storage.size()), argv.data());
+  ASSERT_TRUE(r.errors.empty());
+  EXPECT_EQ(r.opts.color_mode, Options::ColorMode::Auto);
+  EXPECT_TRUE(r.opts.color_ramp.empty());
+  ASSERT_TRUE(r.opts.file.has_value());
+  EXPECT_EQ(*r.opts.file, "data.csv");
+}
+
 }  // namespace
 }  // namespace dotchart

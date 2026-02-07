@@ -112,7 +112,7 @@ Other:
 - `--style=bar|point`  
   Render as bars (default) or points.
 - `--color`  
-  Enable ANSI color output (auto-detect).
+  Enable ANSI color output (auto-detect). Optional spec: `a..b` or `a,b,c` for 256-color ramp.
 - `--16-color`  
   Force ANSI 16-color output.
 - `--256-color`  
