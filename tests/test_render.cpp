@@ -61,6 +61,42 @@ TEST(RenderChart, SignedBaselineBoundary) {
   EXPECT_EQ(lines[0], from_u8(u8"⡼"));
 }
 
+TEST(RenderChart, SignedDefaultColorUsesDifferentSignRanges) {
+  RecordProperty("objective",
+                 "Default color ramps differ for positive and negative rows.");
+  Options opts;
+  opts.height = 3;
+  opts.force_signed = true;
+  opts.color_mode = Options::ColorMode::Ansi256;
+  std::vector<double> values = {-1.0, 1.0};
+  auto lines = render_chart(opts, values);
+
+  ASSERT_EQ(lines.size(), 3u);
+  EXPECT_NE(lines[0].find("\x1b[38;5;22m"), std::string::npos);
+  EXPECT_NE(lines[2].find("\x1b[38;5;196m"), std::string::npos);
+}
+
+TEST(RenderChart, SignSpecificRampsOverrideGenericRamp) {
+  RecordProperty(
+      "objective",
+      "Per-sign ramps override generic --color ramp when both are present.");
+  Options opts;
+  opts.height = 3;
+  opts.force_signed = true;
+  opts.color_mode = Options::ColorMode::Ansi256;
+  opts.color_ramp = {120};      // generic fallback
+  opts.color_ramp_pos = {22};   // positive override
+  opts.color_ramp_neg = {196};  // negative override
+  std::vector<double> values = {-1.0, 1.0};
+  auto lines = render_chart(opts, values);
+
+  ASSERT_EQ(lines.size(), 3u);
+  EXPECT_NE(lines[0].find("\x1b[38;5;22m"), std::string::npos);
+  EXPECT_NE(lines[2].find("\x1b[38;5;196m"), std::string::npos);
+  EXPECT_EQ(lines[0].find("\x1b[38;5;120m"), std::string::npos);
+  EXPECT_EQ(lines[2].find("\x1b[38;5;120m"), std::string::npos);
+}
+
 TEST_F(RenderChartTest, CuratedSineOutput) {
   RecordProperty("objective",
                  "Curated sine sample renders expected default chart output.");

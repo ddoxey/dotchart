@@ -118,11 +118,20 @@ Other:
 - `--style=bar|point`  
   Render as bars (default) or points.
 - `--color`  
-  Enable ANSI color output (auto-detect). Optional spec: `a..b` or `a,b,c` for 256-color ramp.
+  Enable ANSI color output (auto-detect). Optional spec: `a..b` or `a,b,c` for 256-color ramp.  
+  Without a spec, defaults now use separate ranges for positive and negative values.
+- `--color-pos[=SPEC]`, `--color-neg[=SPEC]`  
+  Set positive/negative ramps specifically (same `SPEC` format as `--color`).
 - `--16-color`  
   Force ANSI 16-color output.
+- `--16-color-pos[=SPEC]`, `--16-color-neg[=SPEC]`  
+  Force 16-color mode and optionally set per-sign 16-color ramps (`0..15`).
 - `--256-color`  
   Force ANSI 256-color output.
+- `--256-color-pos[=SPEC]`, `--256-color-neg[=SPEC]`  
+  Force 256-color mode and optionally set per-sign 256-color ramps (`0..255`).
+
+If both a generic ramp (`--color`) and sign-specific ramps are provided, sign-specific ramps take precedence for their respective side.
 - `-h`, `--help`  
   Show help.
 - `-v`, `--version`  

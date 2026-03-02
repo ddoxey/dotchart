@@ -104,6 +104,13 @@ static int ramp_color(double t, int c0, int c1) {
   return static_cast<int>(std::lround(c0 + (c1 - c0) * t));
 }
 
+struct ColorDefaults {
+  int pos_start = 0;
+  int pos_end = 0;
+  int neg_start = 0;
+  int neg_end = 0;
+};
+
 enum class RenderColorMode { None, Ansi16, Ansi256 };
 
 static bool env_contains(const char* v, const char* needle) {
@@ -155,28 +162,47 @@ static RenderColorMode detect_color_mode(Options::ColorMode mode,
 
 static std::string color_for_value(double v, double scale_min, double scale_max,
                                    RenderColorMode mode,
-                                   const std::vector<int>& ramp) {
+                                   const std::vector<int>& ramp,
+                                   const std::vector<int>& ramp_pos,
+                                   const std::vector<int>& ramp_neg) {
   if (mode == RenderColorMode::None) return std::string();
   double denom = (v >= 0.0) ? ((scale_max > 0.0) ? scale_max : 1.0)
                             : ((scale_min < 0.0) ? std::abs(scale_min) : 1.0);
   double t = std::abs(v) / denom;
   t = std::clamp(t, 0.0, 1.0);
 
-  if (!ramp.empty()) {
-    if (ramp.size() == 1) return ansi_color_256(ramp.front());
-    int idx = static_cast<int>(std::lround(t * (ramp.size() - 1)));
-    idx = clamp_int(idx, 0, static_cast<int>(ramp.size() - 1));
-    return ansi_color_256(ramp[static_cast<size_t>(idx)]);
+  const std::vector<int>* active_ramp = &ramp;
+  if (v < 0.0 && !ramp_neg.empty()) {
+    active_ramp = &ramp_neg;
+  } else if (v >= 0.0 && !ramp_pos.empty()) {
+    active_ramp = &ramp_pos;
+  }
+
+  if (!active_ramp->empty()) {
+    if (active_ramp->size() == 1) {
+      return (mode == RenderColorMode::Ansi16)
+                 ? ansi_color_basic(active_ramp->front())
+                 : ansi_color_256(active_ramp->front());
+    }
+    int idx = static_cast<int>(std::lround(t * (active_ramp->size() - 1)));
+    idx = clamp_int(idx, 0, static_cast<int>(active_ramp->size() - 1));
+    int code = (*active_ramp)[static_cast<size_t>(idx)];
+    return (mode == RenderColorMode::Ansi16) ? ansi_color_basic(code)
+                                             : ansi_color_256(code);
   }
 
   if (mode == RenderColorMode::Ansi256) {
-    const int start = 196;
-    const int end = 231;
+    // Default signed ramps intentionally use separate warm/cool ranges.
+    // Positive: green/cyan range, Negative: red->white range.
+    const ColorDefaults defaults{22, 51, 196, 231};
+    const int start = (v < 0.0) ? defaults.neg_start : defaults.pos_start;
+    const int end = (v < 0.0) ? defaults.neg_end : defaults.pos_end;
     return ansi_color_256(ramp_color(t, start, end));
   }
 
-  const int start = 1;
-  const int end = 14;
+  const ColorDefaults defaults{1, 11, 4, 14};
+  const int start = (v < 0.0) ? defaults.neg_start : defaults.pos_start;
+  const int end = (v < 0.0) ? defaults.neg_end : defaults.pos_end;
   return ansi_color_basic(ramp_color(t, start, end));
 }
 
@@ -667,7 +693,9 @@ std::vector<std::string> render_chart(const Options& opts,
         std::string color = (signed_mode && row == zero_row)
                                 ? std::string()
                                 : color_for_value(v, scale_min, scale_max,
-                                                  color_mode, opts.color_ramp);
+                                                  color_mode, opts.color_ramp,
+                                                  opts.color_ramp_pos,
+                                                  opts.color_ramp_neg);
         out.push_back(y_prefix[i] + color + lines[i] + ANSI_RESET);
       } else {
         out.push_back(y_prefix[i] + lines[i]);
@@ -684,7 +712,9 @@ std::vector<std::string> render_chart(const Options& opts,
         std::string color = (signed_mode && row == zero_row)
                                 ? std::string()
                                 : color_for_value(v, scale_min, scale_max,
-                                                  color_mode, opts.color_ramp);
+                                                  color_mode, opts.color_ramp,
+                                                  opts.color_ramp_pos,
+                                                  opts.color_ramp_neg);
         out.push_back(color + lines[i] + ANSI_RESET);
       }
     } else {

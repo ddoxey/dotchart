@@ -103,5 +103,79 @@ TEST(ParseArgs, ColorDoesNotConsumeFilename) {
   EXPECT_EQ(*r.opts.file, "data.csv");
 }
 
+TEST(ParseArgs, ColorPosRangeSpec) {
+  RecordProperty("objective",
+                 "--color-pos range sets positive 256-color ramp.");
+  std::vector<std::string> storage = {"dotchart", "--color-pos", "22..51"};
+  auto argv = make_argv(storage);
+  ParseResult r = parse_args(static_cast<int>(storage.size()), argv.data());
+  ASSERT_TRUE(r.errors.empty());
+  EXPECT_EQ(r.opts.color_mode, Options::ColorMode::Ansi256);
+  ASSERT_EQ(r.opts.color_ramp_pos.size(), 30u);
+  EXPECT_EQ(r.opts.color_ramp_pos.front(), 22);
+  EXPECT_EQ(r.opts.color_ramp_pos.back(), 51);
+  EXPECT_TRUE(r.opts.color_ramp_neg.empty());
+}
+
+TEST(ParseArgs, ColorNegRangeSpec) {
+  RecordProperty("objective",
+                 "--color-neg range sets negative 256-color ramp.");
+  std::vector<std::string> storage = {"dotchart", "--color-neg", "196..231"};
+  auto argv = make_argv(storage);
+  ParseResult r = parse_args(static_cast<int>(storage.size()), argv.data());
+  ASSERT_TRUE(r.errors.empty());
+  EXPECT_EQ(r.opts.color_mode, Options::ColorMode::Ansi256);
+  ASSERT_EQ(r.opts.color_ramp_neg.size(), 36u);
+  EXPECT_EQ(r.opts.color_ramp_neg.front(), 196);
+  EXPECT_EQ(r.opts.color_ramp_neg.back(), 231);
+  EXPECT_TRUE(r.opts.color_ramp_pos.empty());
+}
+
+TEST(ParseArgs, ColorPosDoesNotConsumeFilename) {
+  RecordProperty("objective",
+                 "--color-pos without spec does not consume file argument.");
+  std::vector<std::string> storage = {"dotchart", "--color-pos", "data.csv"};
+  auto argv = make_argv(storage);
+  ParseResult r = parse_args(static_cast<int>(storage.size()), argv.data());
+  ASSERT_TRUE(r.errors.empty());
+  EXPECT_EQ(r.opts.color_mode, Options::ColorMode::Auto);
+  EXPECT_TRUE(r.opts.color_ramp_pos.empty());
+  ASSERT_TRUE(r.opts.file.has_value());
+  EXPECT_EQ(*r.opts.file, "data.csv");
+}
+
+TEST(ParseArgs, Color256PosSetsModeAndParsesSpec) {
+  RecordProperty("objective",
+                 "--256-color-pos forces 256-color mode and parses range.");
+  std::vector<std::string> storage = {"dotchart", "--256-color-pos", "30..33"};
+  auto argv = make_argv(storage);
+  ParseResult r = parse_args(static_cast<int>(storage.size()), argv.data());
+  ASSERT_TRUE(r.errors.empty());
+  EXPECT_EQ(r.opts.color_mode, Options::ColorMode::Ansi256);
+  std::vector<int> expected = {30, 31, 32, 33};
+  EXPECT_EQ(r.opts.color_ramp_pos, expected);
+}
+
+TEST(ParseArgs, Color16NegSetsModeAndParsesSpec) {
+  RecordProperty("objective",
+                 "--16-color-neg forces 16-color mode and parses list.");
+  std::vector<std::string> storage = {"dotchart", "--16-color-neg", "4,5,6"};
+  auto argv = make_argv(storage);
+  ParseResult r = parse_args(static_cast<int>(storage.size()), argv.data());
+  ASSERT_TRUE(r.errors.empty());
+  EXPECT_EQ(r.opts.color_mode, Options::ColorMode::Ansi16);
+  std::vector<int> expected = {4, 5, 6};
+  EXPECT_EQ(r.opts.color_ramp_neg, expected);
+}
+
+TEST(ParseArgs, Color16PosRejectsOutOfRange) {
+  RecordProperty("objective",
+                 "--16-color-pos rejects values above 15.");
+  std::vector<std::string> storage = {"dotchart", "--16-color-pos", "16..20"};
+  auto argv = make_argv(storage);
+  ParseResult r = parse_args(static_cast<int>(storage.size()), argv.data());
+  EXPECT_FALSE(r.errors.empty());
+}
+
 }  // namespace
 }  // namespace dotchart

@@ -53,3 +53,13 @@ if [[ -f "${script_dir}/history_MSFT.csv" ]]; then
   awk -F, 'NR>1{print $5}' "${script_dir}/history_MSFT.csv" | \
     "$dotchart_bin" -y --color 196..231 -H 21 -W 80
 fi
+
+echo "Example 7: Split palette defaults (positive/negative, auto ranges)"
+"${script_dir}/sinewave.sh" | \
+  "$dotchart_bin" -y -x --256-color -H 28
+echo
+
+echo "Example 8: Split palette override (explicit pos/neg ranges)"
+"${script_dir}/sinewave.sh" | \
+  "$dotchart_bin" -y -x --256-color-pos 185..170 --256-color-neg 113..98 -H 21
+echo

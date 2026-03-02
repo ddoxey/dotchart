@@ -44,6 +44,8 @@ struct Options {
   enum class ColorMode { Off, Auto, Ansi16, Ansi256 };
   ColorMode color_mode = ColorMode::Off;
   std::vector<int> color_ramp;
+  std::vector<int> color_ramp_pos;
+  std::vector<int> color_ramp_neg;
 
   // Misc
   bool help = false;
