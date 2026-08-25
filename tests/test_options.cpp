@@ -66,6 +66,19 @@ TEST(ParseArgs, XAxisFormatAsNextArg) {
   EXPECT_EQ(r.opts.x_axis_fmt, "%03d");
 }
 
+TEST(ParseArgs, ParsesXAndYColumns) {
+  RecordProperty("objective", "Column selectors accept positive 1-based indices.");
+  std::vector<std::string> storage = {"dotchart", "--x-column", "2",
+                                      "--column", "3"};
+  auto argv = make_argv(storage);
+  ParseResult r = parse_args(static_cast<int>(storage.size()), argv.data());
+  ASSERT_TRUE(r.errors.empty());
+  ASSERT_TRUE(r.opts.x_column.has_value());
+  ASSERT_TRUE(r.opts.column.has_value());
+  EXPECT_EQ(*r.opts.x_column, 2);
+  EXPECT_EQ(*r.opts.column, 3);
+}
+
 TEST(ParseArgs, XMinAxisFormatAsNextArg) {
   RecordProperty("objective",
                  "Optional --x-min-axis consumes a following format string.");

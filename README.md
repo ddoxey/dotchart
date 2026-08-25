@@ -88,7 +88,9 @@ Input:
 - `-f`, `--file FILE`  
   Read from FILE instead of stdin.
 - `-c`, `--column N`  
-  Use column N (1-based) from delimited input (reserved for future use).
+  Use column N (1-based) as numeric y values. Enables column mode.
+- `--x-column N`
+  Use column N (1-based) as literal x-axis labels. Enables column mode.
 
 Layout:
 - `-W`, `--width COLS|PCT%`  
@@ -145,3 +147,22 @@ If both a generic ramp (`--color`) and sign-specific ramps are provided, sign-sp
 
 - Supports signed rendering with a zero baseline, plus optional X/Y axis labels.
 - Values are read from stdin by default; use `-F` for custom delimiters.
+- Column mode is enabled explicitly with `-c/--column` or `--x-column`. Its
+  defaults are x column 1 and y column 2, and malformed records are skipped.
+- Literal labels from an x column are used by `--x-axis` and `--x-min-axis`.
+  Axis `FMT` strings apply only to generated 1-based index labels.
+
+For example, given comma-separated dates and balances:
+
+```text
+2026-08-01,1250.00
+2026-08-02,980.00
+2026-08-03,1100.00
+```
+
+the following plots the second column and labels its strict minima with dates
+from the first column:
+
+```bash
+dotchart -F, -c 2 --x-min-axis balances.csv
+```

@@ -118,7 +118,8 @@ Reads numeric values (CSV or whitespace) and prints a Braille-based terminal cha
 Input:
   -F, --field-sep SEP      Field separator (default: auto: commas+whitespace)
   -f, --file FILE          Read from FILE (default: stdin)
-  -c, --column N           Use column N (1-based) from delimited input (reserved)
+  -c, --column N           Use column N as y values (enables column mode)
+      --x-column N         Use column N as x labels (enables column mode)
 
 Layout:
   -W, --width COLS|PCT%   Output width (default: fit-to-data; capped by tty width)
@@ -168,6 +169,7 @@ ParseResult parse_args(int argc, char** argv) {
   static option long_opts[] = {{"field-sep", required_argument, nullptr, 'F'},
                                {"file", required_argument, nullptr, 'f'},
                                {"column", required_argument, nullptr, 'c'},
+                               {"x-column", required_argument, nullptr, 1012},
                                {"width", required_argument, nullptr, 'W'},
                                {"height", required_argument, nullptr, 'H'},
                                {"title", required_argument, nullptr, 'T'},
@@ -254,6 +256,14 @@ ParseResult parse_args(int argc, char** argv) {
           r.errors.push_back("'-c/--column' expects a positive integer.");
         else
           r.opts.column = n;
+        break;
+      }
+      case 1012: {
+        int n = 0;
+        if (!parse_int(optarg, n) || n <= 0)
+          r.errors.push_back("'--x-column' expects a positive integer.");
+        else
+          r.opts.x_column = n;
         break;
       }
       case 'W': {

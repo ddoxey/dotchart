@@ -18,7 +18,8 @@ struct Options {
   // Input
   char field_sep = '\0';            // '\0' => auto (comma + whitespace)
   std::optional<std::string> file;  // if unset, read stdin
-  std::optional<int> column;  // 1-based column selection (optional; future)
+  std::optional<int> column;    // 1-based y-value column
+  std::optional<int> x_column;  // 1-based x-label column
 
   // Layout
   WidthSpec width;  // columns

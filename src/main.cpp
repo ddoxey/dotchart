@@ -47,7 +47,7 @@ int main(int argc, char** argv) {
       return 1;
     }
 
-    auto lines = render_chart(pr.opts, values);
+    auto lines = render_chart(pr.opts, values, parsed.x_labels);
     for (const auto& ln : lines) std::cout << ln << "\n";
     return 0;
   } catch (const std::exception& ex) {

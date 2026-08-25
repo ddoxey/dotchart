@@ -12,6 +12,7 @@ int determine_output_width(const Options& opts);
 
 // Render a v0 braille bar chart. Currently unsigned-only (signed TBD).
 std::vector<std::string> render_chart(const Options& opts,
-                                      const std::vector<double>& values);
+                                      const std::vector<double>& values,
+                                      const std::vector<std::string>& x_labels = {});
 
 }  // namespace dotchart

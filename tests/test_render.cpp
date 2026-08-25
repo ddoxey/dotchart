@@ -275,5 +275,35 @@ TEST(RenderChart, XMinAxisExcludesEndpointsAndPlateaus) {
   EXPECT_EQ(lines[2], "   ");
 }
 
+TEST(RenderChart, XAxisUsesInputLabels) {
+  RecordProperty("objective", "Regular x-axis ticks use supplied literal labels.");
+  Options opts;
+  opts.height = 1;
+  opts.show_x_axis = true;
+  const std::vector<double> values(10, 1.0);
+  const std::vector<std::string> labels = {"A", "B", "C", "D", "E",
+                                           "F", "G", "H", "I", "J"};
+  const auto lines = render_chart(opts, values, labels);
+  ASSERT_EQ(lines.size(), 3u);
+  EXPECT_EQ(lines[1], from_u8(u8"⢰ ⢰ ⢰"));
+  EXPECT_EQ(lines[2], "A F J");
+}
+
+TEST(RenderChart, XMinAxisUsesLabelsAtMinimumIndices) {
+  RecordProperty("objective",
+                 "Minima ticks use labels paired with the original y values.");
+  Options opts;
+  opts.height = 1;
+  opts.show_x_min_axis = true;
+  const std::vector<double> values = {0.0, -1.0, 0.0, 0.0, 0.0,
+                                      0.0, 0.0,  -2.0, 0.0, 0.0};
+  const std::vector<std::string> labels = {"A", "B", "C", "D", "E",
+                                           "F", "G", "H", "I", "J"};
+  const auto lines = render_chart(opts, values, labels);
+  ASSERT_EQ(lines.size(), 3u);
+  EXPECT_EQ(lines[1], from_u8(u8"⡆  ⡆ "));
+  EXPECT_EQ(lines[2], "B  H ");
+}
+
 }  // namespace
 }  // namespace dotchart

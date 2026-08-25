@@ -416,7 +416,8 @@ static void set_bar_segment(BrailleCanvas& canvas, int cx, int px,
 }
 
 std::vector<std::string> render_chart(const Options& opts,
-                                      const std::vector<double>& values) {
+                                      const std::vector<double>& values,
+                                      const std::vector<std::string>& x_labels) {
   // v0: unsigned-only bars (negatives clamped to 0), but width behavior
   // improved.
   const TermSize ts = determine_terminal_size_fallback80x24();
@@ -596,6 +597,10 @@ std::vector<std::string> render_chart(const Options& opts,
       }
       std::cerr << "\n\n";
     }
+    if (!x_labels.empty()) {
+      std::cerr << std::left << std::setw(22) << "x labels"
+                << x_labels.size() << "\n\n";
+    }
   }
 
   const int P = H * 4;  // pixel rows
@@ -763,6 +768,11 @@ std::vector<std::string> render_chart(const Options& opts,
       std::string label;
     };
     std::vector<Placement> placements;
+    const bool has_input_labels = x_labels.size() == values.size();
+    auto label_for_index = [&](int idx, const std::string& fmt) {
+      if (has_input_labels) return x_labels[static_cast<size_t>(idx)];
+      return format_int(fmt, idx + 1);
+    };
 
     if (opts.show_x_min_axis) {
       int next_label_end = width - 1;
@@ -773,8 +783,7 @@ std::vector<std::string> render_chart(const Options& opts,
             static_cast<int>(std::lround(t * (width - 1))), 0, width - 1);
         tick_cols[static_cast<size_t>(col)] = true;
 
-        const std::string label =
-            format_int(opts.x_min_axis_fmt, idx + 1);
+        const std::string label = label_for_index(idx, opts.x_min_axis_fmt);
         const int start = col - (static_cast<int>(label.size()) - 1);
         if (!label.empty() && start >= 0 && col <= next_label_end) {
           placements.push_back(Placement{col, start, col, label});
@@ -787,8 +796,7 @@ std::vector<std::string> render_chart(const Options& opts,
       while (col >= 0) {
         double t = (width == 1) ? 0.0 : static_cast<double>(col) / (width - 1);
         int idx = static_cast<int>(std::lround(t * denom));
-        int label_value = idx + 1;
-        std::string label = format_int(opts.x_axis_fmt, label_value);
+        std::string label = label_for_index(idx, opts.x_axis_fmt);
         if (label.empty()) {
           --col;
           continue;
