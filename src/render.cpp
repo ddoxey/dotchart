@@ -388,6 +388,16 @@ static std::vector<double> resample_extreme_abs(const std::vector<double>& in,
   return out;
 }
 
+static std::vector<int> find_local_minima(const std::vector<double>& values) {
+  std::vector<int> minima;
+  for (size_t i = 1; i + 1 < values.size(); ++i) {
+    if (values[i] < values[i - 1] && values[i] < values[i + 1]) {
+      minima.push_back(static_cast<int>(i));
+    }
+  }
+  return minima;
+}
+
 static void set_bar_segment(BrailleCanvas& canvas, int cx, int px,
                             int start_from_bottom, int end_from_bottom) {
   const int H = canvas.height();
@@ -546,6 +556,9 @@ std::vector<std::string> render_chart(const Options& opts,
     samples = resample_extreme_abs(values, target_samples);
   }
 
+  const std::vector<int> local_minima =
+      opts.show_x_min_axis ? find_local_minima(values) : std::vector<int>{};
+
   const int max_colors = detect_max_colors();
   const RenderColorMode color_mode =
       detect_color_mode(opts.color_mode, max_colors);
@@ -572,6 +585,16 @@ std::vector<std::string> render_chart(const Options& opts,
     } else {
       std::cerr << std::left << std::setw(22) << "signed mode" << "no"
                 << "\n\n";
+    }
+    if (opts.show_x_min_axis) {
+      std::cerr << std::left << std::setw(22) << "local minima"
+                << local_minima.size() << "\n";
+      std::cerr << std::left << std::setw(22) << "minimum indices";
+      for (size_t i = 0; i < local_minima.size(); ++i) {
+        if (i > 0) std::cerr << ",";
+        std::cerr << local_minima[i] + 1;
+      }
+      std::cerr << "\n\n";
     }
   }
 
@@ -675,7 +698,9 @@ std::vector<std::string> render_chart(const Options& opts,
   auto lines = canvas.render_utf8();
 
   std::vector<std::string> out;
-  out.reserve(lines.size() + (opts.title ? 1 : 0) + (opts.show_x_axis ? 2 : 0));
+  const bool show_any_x_axis = opts.show_x_axis || opts.show_x_min_axis;
+  out.reserve(lines.size() + (opts.title ? 1 : 0) +
+              (show_any_x_axis ? 2 : 0));
 
   if (opts.title) out.push_back(*opts.title);
 
@@ -722,9 +747,11 @@ std::vector<std::string> render_chart(const Options& opts,
     }
   }
 
-  if (opts.show_x_axis) {
+  if (show_any_x_axis) {
     const int width = cells_w;
-    const std::string tick_glyph = utf8_encode(0x28B0);  // dots 5, 6, 8
+    const std::string tick_glyph = opts.show_x_min_axis
+                                       ? utf8_encode(0x2846)  // dots 2, 3, 7
+                                       : utf8_encode(0x28B0); // dots 5, 6, 8
     std::vector<bool> tick_cols(static_cast<size_t>(width), false);
     std::string label_line(static_cast<size_t>(width), ' ');
 
@@ -737,28 +764,47 @@ std::vector<std::string> render_chart(const Options& opts,
     };
     std::vector<Placement> placements;
 
-    int col = width - 1;
-    std::string last_label;
-    while (col >= 0) {
-      double t = (width == 1) ? 0.0 : static_cast<double>(col) / (width - 1);
-      int idx = static_cast<int>(std::lround(t * denom));
-      int label_value = idx + 1;
-      std::string label = format_int(opts.x_axis_fmt, label_value);
-      if (label.empty()) {
-        --col;
-        continue;
+    if (opts.show_x_min_axis) {
+      int next_label_end = width - 1;
+      for (auto it = local_minima.rbegin(); it != local_minima.rend(); ++it) {
+        const int idx = *it;
+        const double t = (n <= 1) ? 0.0 : static_cast<double>(idx) / denom;
+        const int col = clamp_int(
+            static_cast<int>(std::lround(t * (width - 1))), 0, width - 1);
+        tick_cols[static_cast<size_t>(col)] = true;
+
+        const std::string label =
+            format_int(opts.x_min_axis_fmt, idx + 1);
+        const int start = col - (static_cast<int>(label.size()) - 1);
+        if (!label.empty() && start >= 0 && col <= next_label_end) {
+          placements.push_back(Placement{col, start, col, label});
+          next_label_end = start - 2;
+        }
       }
-      if (label == last_label) {
-        --col;
-        continue;
+    } else {
+      int col = width - 1;
+      std::string last_label;
+      while (col >= 0) {
+        double t = (width == 1) ? 0.0 : static_cast<double>(col) / (width - 1);
+        int idx = static_cast<int>(std::lround(t * denom));
+        int label_value = idx + 1;
+        std::string label = format_int(opts.x_axis_fmt, label_value);
+        if (label.empty()) {
+          --col;
+          continue;
+        }
+        if (label == last_label) {
+          --col;
+          continue;
+        }
+        int label_len = static_cast<int>(label.size());
+        int end = col;
+        int start = end - (label_len - 1);
+        if (start < 0) break;
+        placements.push_back(Placement{col, start, end, label});
+        last_label = label;
+        col = start - 2;  // one space gap between labels
       }
-      int label_len = static_cast<int>(label.size());
-      int end = col;
-      int start = end - (label_len - 1);
-      if (start < 0) break;
-      placements.push_back(Placement{col, start, end, label});
-      last_label = label;
-      col = start - 2;  // one space gap between labels
     }
 
     for (auto it = placements.rbegin(); it != placements.rend(); ++it) {

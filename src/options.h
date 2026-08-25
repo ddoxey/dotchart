@@ -37,6 +37,8 @@ struct Options {
   bool y_axis_fmt_is_int = false;
   bool show_x_axis = false;
   std::string x_axis_fmt = "%d";  // printf-style (index labels)
+  bool show_x_min_axis = false;    // label strict local minima only
+  std::string x_min_axis_fmt = "%d";
 
   // Output
   bool unicode = true;

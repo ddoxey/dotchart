@@ -109,6 +109,8 @@ Scaling:
 Axes:
 - `-x`, `--x-axis[=FMT]`  
   Show x-axis labels (default format: `%d`).
+- `--x-min-axis[=FMT]`
+  Mark strict local minima and label their 1-based indices (default format: `%d`).
 - `-y`, `--y-axis[=FMT]`  
   Show y-axis labels (default format: `%3.0f `, or auto-derived from input when no format is given).
 

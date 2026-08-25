@@ -245,5 +245,35 @@ TEST(RenderChart, ZeroLineHeightThreeAsymmetric) {
   }
 }
 
+TEST(RenderChart, XMinAxisMarksStrictInteriorMinima) {
+  RecordProperty(
+      "objective",
+      "Minima mode ticks strict interior minima and labels 1-based indices.");
+  Options opts;
+  opts.height = 1;
+  opts.show_x_min_axis = true;
+  std::vector<double> values = {0.0, -1.0, 0.0, 0.0, 0.0,
+                                0.0, 0.0,  -2.0, 0.0, 0.0};
+  auto lines = render_chart(opts, values);
+
+  ASSERT_EQ(lines.size(), 3u);
+  EXPECT_EQ(lines[1], from_u8(u8"⡆  ⡆ "));
+  EXPECT_EQ(lines[2], "2  8 ");
+}
+
+TEST(RenderChart, XMinAxisExcludesEndpointsAndPlateaus) {
+  RecordProperty("objective",
+                 "Endpoints and flat valleys are not strict local minima.");
+  Options opts;
+  opts.height = 1;
+  opts.show_x_min_axis = true;
+  std::vector<double> values = {-2.0, 0.0, -1.0, -1.0, 0.0, -2.0};
+  auto lines = render_chart(opts, values);
+
+  ASSERT_EQ(lines.size(), 3u);
+  EXPECT_EQ(lines[1], "   ");
+  EXPECT_EQ(lines[2], "   ");
+}
+
 }  // namespace
 }  // namespace dotchart

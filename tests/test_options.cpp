@@ -66,6 +66,26 @@ TEST(ParseArgs, XAxisFormatAsNextArg) {
   EXPECT_EQ(r.opts.x_axis_fmt, "%03d");
 }
 
+TEST(ParseArgs, XMinAxisFormatAsNextArg) {
+  RecordProperty("objective",
+                 "Optional --x-min-axis consumes a following format string.");
+  std::vector<std::string> storage = {"dotchart", "--x-min-axis", "%03d"};
+  auto argv = make_argv(storage);
+  ParseResult r = parse_args(static_cast<int>(storage.size()), argv.data());
+  ASSERT_TRUE(r.errors.empty());
+  EXPECT_TRUE(r.opts.show_x_min_axis);
+  EXPECT_EQ(r.opts.x_min_axis_fmt, "%03d");
+}
+
+TEST(ParseArgs, XAxisModesAreMutuallyExclusive) {
+  RecordProperty("objective", "Only one x-axis rendering mode may be selected.");
+  std::vector<std::string> storage = {"dotchart", "--x-axis",
+                                      "--x-min-axis"};
+  auto argv = make_argv(storage);
+  ParseResult r = parse_args(static_cast<int>(storage.size()), argv.data());
+  EXPECT_FALSE(r.errors.empty());
+}
+
 TEST(ParseArgs, ColorRangeSpec) {
   RecordProperty("objective",
                  "--color range sets 256-color ramp and enables color.");

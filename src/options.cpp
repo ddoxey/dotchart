@@ -132,6 +132,7 @@ Scaling:
 
 Labels:
   -x, --x-axis[=FMT]       Show x-axis labels (default format: "%d")
+      --x-min-axis[=FMT]   Mark and label local minima (default format: "%d")
   -y, --y-axis[=FMT]       Show y-axis labels (default format: "%3.0f ")
 
 Other:
@@ -174,6 +175,8 @@ ParseResult parse_args(int argc, char** argv) {
                                {"min", required_argument, nullptr, 'm'},
                                {"signed", no_argument, nullptr, 'S'},
                                {"x-axis", optional_argument, nullptr, 'x'},
+                               {"x-min-axis", optional_argument, nullptr,
+                                1011},
                                {"y-axis", optional_argument, nullptr, 'y'},
                                {"no-unicode", no_argument, nullptr, 1000},
                                {"style", required_argument, nullptr, 1004},
@@ -322,6 +325,15 @@ ParseResult parse_args(int argc, char** argv) {
           ++optind;
         }
         break;
+      case 1011:
+        r.opts.show_x_min_axis = true;
+        if (optarg && *optarg) {
+          r.opts.x_min_axis_fmt = std::string(optarg);
+        } else if (optind < argc && looks_like_format_arg(argv[optind])) {
+          r.opts.x_min_axis_fmt = std::string(argv[optind]);
+          ++optind;
+        }
+        break;
       case 'y':
         r.opts.show_y_axis = true;
         if (optarg && *optarg) {
@@ -409,6 +421,9 @@ ParseResult parse_args(int argc, char** argv) {
   }
   if (optind < argc) {
     r.errors.push_back("Too many positional arguments. Use at most one FILE.");
+  }
+  if (r.opts.show_x_axis && r.opts.show_x_min_axis) {
+    r.errors.push_back("'--x-axis' and '--x-min-axis' are mutually exclusive.");
   }
 #else
   r.errors.push_back("Argument parsing not implemented on this platform yet.");
